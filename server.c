@@ -8,6 +8,34 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+struct parsed_command {
+  char* command;
+  double argument; 
+};
+
+parsed_command parseCommand(char* rawCommand) {
+  char command[20];
+  char argument[4];
+  int comm_end = 0;
+
+  while (rawCommand[comm_end] != '#' || rawCommand[comm_end] != '!') {
+    command[comm_end] = rawCommand[comm_end];
+    comm_end++;
+  }
+
+  if (rawCommand[comm_end] == '!') 
+
+  int arg_end = comm_end + 1;
+
+  while (rawCommand[arg_end] != 
+
+  
+  char* test strtok(rawCommand,"#");
+  parsed_command mensagem;
+  mensagem.command = test;
+  double test_param strtol(rawCommand, "!");
+}
+
 void error(const char *msg)
 {
     perror(msg);
