@@ -13,8 +13,8 @@ typedef struct {
   double argument; 
 } parsed_command;
 
-parsed_command parseCommand(char *rawCommand, char *command, double *argument) {
-
+parsed_command parseCommand(char *rawCommand) {
+  char *command;
   char *argument_string;
   char *string, *tofree;
 
@@ -23,24 +23,18 @@ parsed_command parseCommand(char *rawCommand, char *command, double *argument) {
   if (string == NULL)
     err(1, "strcpy");
 
-  command = strdup(strsep(&string, "#!"));
+  command = strsep(&string, "#!");
 
   argument_string = strsep(&string, "!");
 
-  *argument = argument_string[0] == '\0' ? -1 : atof(argument_string);
-
-  //  printf("command: _%s_\n", command);
-  //  printf("argument: _%f_\n", *argument);
-
   parsed_command pcomm;
   strcpy(pcomm.command, command);
-  pcomm.argument = *argument;
+  pcomm.argument = argument_string[0] == '\0' ? -1. : atof(argument_string);
+
+  printf("argument: _%s_\n", argument_string);
+  printf("argument: _%f_\n", pcomm.argument);
 
   free(tofree);
-  free(command);
-
-  //  printf("command: _%s_\n", pcomm.command);
-  //  printf("argument: _%f_\n", pcomm.argument);
 
   return pcomm;
 }
@@ -53,18 +47,7 @@ void error(const char *msg)
 
 int main(int argc, char *argv[])
 {
-  double argument;
-  char *command;
-
-  parsed_command pcomm = parseCommand("t#1!", command, &argument);
-  
-  printf("command: %s\n", pcomm.command);
-  printf("argument: %f\n", pcomm.argument);
-
-  pcomm = parseCommand("y#2!", command, &argument);
-  
-  printf("command: %s\n", pcomm.command);
-  printf("argument: %f\n", pcomm.argument);
+  parsed_command pcomm;
   
   int sockfd, newsockfd, portno;
   socklen_t clilen;
@@ -96,12 +79,17 @@ int main(int argc, char *argv[])
       error("ERROR on accept");
     bzero(buffer,256);
     n = read(newsockfd,buffer,255);
-    
     if (n < 0) error("ERROR reading from socket");
     printf("Here is the message: %s\n",buffer);
     n = write(newsockfd,"I got your message",18);    
     if (n < 0) error("ERROR writing to socket");
-  } while (strcmp(buffer, "exit\n")!=0);
+
+    pcomm = parseCommand(buffer);
+  
+    printf("command: _%s_\n", pcomm.command);
+    printf("argument: _%f_\n", pcomm.argument);
+
+  } while (strcmp(pcomm.command, "exit")!=0);
   close(newsockfd);
   close(sockfd);
 
