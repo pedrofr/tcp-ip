@@ -21,8 +21,6 @@ int main(int argc, char *argv[])
 
   char buffer_in[256];
   char buffer_out[256];
-  char buffer_kb[256];
-  char *dup;
 
   if (argc < 3)
   {
@@ -51,13 +49,12 @@ int main(int argc, char *argv[])
     if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
       error("ERROR connecting");
     printf("Please enter the message: ");
-    bzero(buffer_kb, 256);
     bzero(buffer_out, 256);
-    fgets(buffer_kb, 255, stdin);
+    fgets(buffer_out, 255, stdin);
 
-    dup = strdup(buffer_kb);
-    buffer_out = strdup(dup, "\n");
-    
+    char *pos = strchr(buffer_out, '\n');
+    *pos = '\0';
+
     n = write(sockfd, buffer_out, strlen(buffer_out));
     if (n < 0)
       error("ERROR writing to socket");
@@ -67,7 +64,7 @@ int main(int argc, char *argv[])
       error("ERROR reading from socket");
     printf("%s\n", buffer_in);
     close(sockfd);
-  } while (strcmp(buffer_out, "exit\n") != 0);
+  } while (strcmp(buffer_out, "exit!") != 0);
 
   return 0;
 }
