@@ -36,12 +36,12 @@ parscomm parse(char *rawCommand)
   command = strsep(&string, "#!");
 
   if (string == NULL || *command == '\0')
-  {
-    strcpy(pcomm.command, "");
-    pcomm.argument = -1.;
+    {
+      strcpy(pcomm.command, "");
+      pcomm.argument = -1.;
 
-    return pcomm;
-  }
+      return pcomm;
+    }
 
   argument_string = strsep(&string, "!");
 
@@ -78,33 +78,50 @@ int main(int argc, char *argv[])
   if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     error("ERROR on binding");
 
-  do
-  {
-    listen(sockfd, 5);
-    clilen = sizeof(cli_addr);
+  while (1)
+    {
+      listen(sockfd, 5);
+      clilen = sizeof(cli_addr);
 
-    newsockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen);
-    if (newsockfd < 0)
-      error("ERROR on accept");
+      newsockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen);
+      if (newsockfd < 0)
+	error("ERROR on accept");
 
-    bzero(buffer, 256);
+      bzero(buffer, 256);
 
-    n = read(newsockfd, buffer, 255);
-    if (n < 0)
-      error("ERROR reading from socket");
+      n = read(newsockfd, buffer, 255);
+      if (n < 0)
+	error("ERROR reading from socket");
 
-    printf("Here is the message: %s\n", buffer);
+      printf("Here is the message: %s\n", buffer);
 
-    n = write(newsockfd, "I got your message", 18);
-    if (n < 0)
-      error("ERROR writing to socket");
+      n = write(newsockfd, "I got your message", 18);
+      if (n < 0)
+	error("ERROR writing to socket");
 
-    pcomm = parse(buffer);
+      pcomm = parse(buffer);
 
-    printf("command: '%s'\n", pcomm.command);
-    printf("argument: '%.0f'\n", pcomm.argument);
+      printf("command: '%s'\n", pcomm.command);
+      printf("argument: '%.0f'\n", pcomm.argument);
 
-  } while (strcmp(pcomm.command, "exit") != 0);
+      if(strcmp(pcomm.command,"Ola") ==0)
+	{
+	  n=write(newsockfd,"Mensagem foi ola",16);
+	}
+      else if(strcmp(pcomm.command,"Tchau") == 0)
+	{
+	  n=write(newsockfd,"Mensagem foi tchau",18);
+	}
+      else if(strcmp(pcomm.command, "exit") == 0)
+	{
+	  break;
+	}
+      else 
+	{
+	  n=write(newsockfd,"Mensagem nao reconhecida",25);
+	}
+
+    } 
 
   close(newsockfd);
   close(sockfd);
