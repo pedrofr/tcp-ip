@@ -7,10 +7,83 @@
 #include <netinet/in.h>
 #include <netdb.h>
 
+typedef struct parsed_command
+{
+  char command[11];
+  double argument;
+} parscomm;
+
 void error(const char *msg)
 {
   perror(msg);
   exit(0);
+}
+
+int isNumeric(const char *s){
+  if(s == NULL || *s == '\0' || isspace(*s))
+    return 0;
+  char * p;
+  strtod (s, &p);
+  return *p == '\0';
+}
+
+parscomm parse(char *rawCommand)
+{
+  char *command;
+  char *argument_string;
+  char *string, *tofree;
+  parscomm pcomm;
+
+  tofree = string = strdup(rawCommand);
+
+  if (string == NULL)
+    error("strcpy");
+
+  int length;
+  length = strlen(string);
+  if(string[length-1] != '!')
+    string = "";
+
+  command = strsep(&string, "#!");
+
+  if (string == NULL || *command == '\0')
+    {
+      //error
+      strcpy(pcomm.command, "");
+      pcomm.argument = -1.;
+      
+      free(tofree);
+
+      return pcomm;
+    }
+
+  int diff = string - command;
+
+  if (rawCommand[diff-1] == '!')
+    {
+      strcpy(pcomm.command, command);
+      pcomm.argument = -1.;
+    }
+  if (rawCommand[diff-1] == '#')
+    {
+      argument_string = strsep(&string, "!");
+
+      if (isNumeric(argument_string))
+	{
+	  strcpy(pcomm.command, command);
+	  pcomm.argument = atof(argument_string);
+	}
+      else
+	{
+	  //error
+	  strcpy(pcomm.command, "");
+	  pcomm.argument = -1.;
+	}
+    }
+
+  free(tofree);
+
+  return pcomm;
 }
 
 int main(int argc, char *argv[])
@@ -72,8 +145,14 @@ int main(int argc, char *argv[])
 
     printf("%s\n", buffer_in);
 
+    parscomm pcomm;
+    pcomm = parse(buffer_in);
+
+    printf("command: '%s'\n", pcomm.command);
+    printf("argument: '%.0f'\n", pcomm.argument);
+
     close(sockfd);
-  } while (strcmp(buffer_out, "exit!") != 0);
+  } while (strcmp(buffer_out, "Exit!") != 0);
 
   return 0;
 }

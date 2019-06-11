@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <err.h>
+#include <ctype.h>
 
 typedef struct parsed_command
 {
@@ -19,6 +20,14 @@ void error(const char *msg)
 {
   perror(msg);
   exit(1);
+}
+
+int isNumeric(const char *s){
+  if(s == NULL || *s == '\0' || isspace(*s))
+    return 0;
+  char * p;
+  strtod (s, &p);
+  return *p == '\0';
 }
 
 parscomm parse(char *rawCommand)
@@ -33,20 +42,52 @@ parscomm parse(char *rawCommand)
   if (string == NULL)
     error("strcpy");
 
+  int length;
+  length = strlen(string);
+  if(string[length-1] != '!')
+    string = "";
+
   command = strsep(&string, "#!");
 
   if (string == NULL || *command == '\0')
     {
+      //error
       strcpy(pcomm.command, "");
       pcomm.argument = -1.;
+      
+      free(tofree);
 
       return pcomm;
     }
 
-  argument_string = strsep(&string, "!");
+  int diff = string - command;
 
-  strcpy(pcomm.command, command);
-  pcomm.argument = *argument_string == '\0' ? -1. : atof(argument_string);
+  if (rawCommand[diff-1] == '!')
+    {
+      strcpy(pcomm.command, command);
+      pcomm.argument = -1.;
+    }
+  if (rawCommand[diff-1] == '#')
+    {
+      argument_string = strsep(&string, "!");
+
+      if (isNumeric(argument_string))
+	{
+	  strcpy(pcomm.command, command);
+	  pcomm.argument = atof(argument_string);
+	}
+      else if (strcmp(argument_string, "OK") == 0)
+	{
+	  strcpy(pcomm.command, command);
+	  pcomm.argument = -1.;
+	}
+      else
+	{
+	  //error
+	  strcpy(pcomm.command, "");
+	  pcomm.argument = -1.;
+	}
+    }
 
   free(tofree);
 
@@ -95,32 +136,53 @@ int main(int argc, char *argv[])
 
       printf("Here is the message: %s\n", buffer);
 
-      n = write(newsockfd, "I got your message", 18);
-      if (n < 0)
-	error("ERROR writing to socket");
-
       pcomm = parse(buffer);
 
       printf("command: '%s'\n", pcomm.command);
       printf("argument: '%.0f'\n", pcomm.argument);
-
-      if(strcmp(pcomm.command,"Ola") ==0)
+      char *response;
+      if(strcmp(pcomm.command,"OpenValve") ==0)
 	{
-	  n=write(newsockfd,"Mensagem foi ola",16);
+	  sprintf(response, "Open#%i!", pcomm.argument);
+	  n=write(newsockfd,response,strlen(response));
 	}
-      else if(strcmp(pcomm.command,"Tchau") == 0)
+      else if(strcmp(pcomm.command,"CloseValve") == 0)
 	{
-	  n=write(newsockfd,"Mensagem foi tchau",18);
+	  sprintf(response, "Close#%i!", pcomm.argument);
+	  n=write(newsockfd,response,strlen(response));
 	}
-      else if(strcmp(pcomm.command, "exit") == 0)
+      else if(strcmp(pcomm.command,"GetLevel") == 0)
+	{
+	  sprintf(response, "Level#%i!", pcomm.argument);
+	  n=write(newsockfd,response,strlen(response));
+	}
+      else if(strcmp(pcomm.command,"CommTest") == 0)
+	{
+	  sprintf(response, "Comm#%s!", "OK");
+	  n=write(newsockfd,response,strlen(response));
+	}
+      else if(strcmp(pcomm.command,"SetMax") == 0)
+	{
+	  sprintf(response, "Max#%i!", pcomm.argument);
+	  n=write(newsockfd,response,strlen(response));
+	}
+      else if(strcmp(pcomm.command,"Start") == 0)
+	{
+	  sprintf(response, "Start#%s!", "OK");
+	  n=write(newsockfd,response,strlen(response));
+	}
+      else if(strcmp(pcomm.command, "Exit") == 0)
 	{
 	  break;
 	}
       else 
 	{
-	  n=write(newsockfd,"Mensagem nao reconhecida",25);
+	  sprintf(response, "NoMessageFound!", 10.2);
+	  n=write(newsockfd,response,strlen(response));
 	}
 
+      if (n < 0)
+	error("ERROR writing to socket");
     } 
 
   close(newsockfd);
