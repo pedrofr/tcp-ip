@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
     if (n < 0)
       error("ERROR reading from socket");
 
-    printf("Here is the message: %s\n", buffer_in);
+    printf("\nRequest: %s\n", buffer_in);
 
     pcomm = parse(buffer_in, MIN_VALUE, MAX_VALUE, OK);
 
@@ -113,6 +113,8 @@ int main(int argc, char *argv[])
 
   close(newsockfd);
   close(sockfd);
+
+  printf("\nClosing!\n");
 
   return 0;
 }

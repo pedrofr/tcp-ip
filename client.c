@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
     if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
       error("ERROR connecting");
 
-    printf("Please enter the message: ");
+    printf("\nPlease enter the message: ");
     bzero(buffer_out, 256);
     fgets(buffer_out, 255, stdin);
 
@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
     if (n < 0)
       error("ERROR reading from socket");
 
-    printf("%s\n", buffer_in);
+    printf("\nResponse: %s\n", buffer_in);
 
     pcomm = parse(buffer_in, MIN_VALUE, MAX_VALUE, OK);
 
@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
     
   } while (!matches_arg(pcomm.command, pcomm.argument, "Exit", "OK"));
 
-  printf("Exiting")
+  printf("\nClosing!\n");
 
   return 0;
 }
