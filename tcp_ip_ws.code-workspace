@@ -4,5 +4,12 @@
 			"path": "."
 		}
 	],
-	"settings": {}
+	"settings": {
+		"files.associations": {
+			"in.h": "c",
+			"string.h": "c",
+			"parse.h": "c",
+			"error.h": "c"
+		}
+	}
 }

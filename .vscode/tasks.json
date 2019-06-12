@@ -8,6 +8,8 @@
             "args": [
                 "-g",
                 "${file}",
+                "${fileDirname}/parse.c",
+                "${fileDirname}/error.c",
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}"
             ],

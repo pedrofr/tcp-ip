@@ -8,97 +8,18 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <err.h>
-#include <ctype.h>
+#include "error.h"
+#include "parse.h"
+#include "comm_consts.h"
 
-typedef struct parsed_command
-{
-  char command[11];
-  double argument;
-} parscomm;
-
-void error(const char *msg)
-{
-  perror(msg);
-  exit(1);
-}
-
-int isNumeric(const char *s){
-  if(s == NULL || *s == '\0' || isspace(*s))
-    return 0;
-  char * p;
-  strtod (s, &p);
-  return *p == '\0';
-}
-
-parscomm parse(char *rawCommand)
-{
-  char *command;
-  char *argument_string;
-  char *string, *tofree;
-  parscomm pcomm;
-
-  tofree = string = strdup(rawCommand);
-
-  if (string == NULL)
-    error("strcpy");
-
-  int length;
-  length = strlen(string);
-  if(string[length-1] != '!')
-    string = "";
-
-  command = strsep(&string, "#!");
-
-  if (string == NULL || *command == '\0')
-    {
-      //error
-      strcpy(pcomm.command, "");
-      pcomm.argument = -1.;
-      
-      free(tofree);
-
-      return pcomm;
-    }
-
-  int diff = string - command;
-
-  if (rawCommand[diff-1] == '!')
-    {
-      strcpy(pcomm.command, command);
-      pcomm.argument = -1.;
-    }
-  if (rawCommand[diff-1] == '#')
-    {
-      argument_string = strsep(&string, "!");
-
-      if (isNumeric(argument_string))
-	{
-	  strcpy(pcomm.command, command);
-	  pcomm.argument = atof(argument_string);
-	}
-      else if (strcmp(argument_string, "OK") == 0)
-	{
-	  strcpy(pcomm.command, command);
-	  pcomm.argument = -1.;
-	}
-      else
-	{
-	  //error
-	  strcpy(pcomm.command, "");
-	  pcomm.argument = -1.;
-	}
-    }
-
-  free(tofree);
-
-  return pcomm;
-}
+#define h_addr h_addr_list[0] /* for backward compatibility */
 
 int main(int argc, char *argv[])
 {
   int sockfd, newsockfd, portno;
   socklen_t clilen;
-  char buffer[256];
+  char buffer_in[256];
+  char buffer_out[256];
   struct sockaddr_in serv_addr, cli_addr;
   int n;
   parscomm pcomm;
@@ -120,70 +41,75 @@ int main(int argc, char *argv[])
     error("ERROR on binding");
 
   while (1)
+  {
+    listen(sockfd, 5);
+    clilen = sizeof(cli_addr);
+
+    newsockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen);
+    if (newsockfd < 0)
+      error("ERROR on accept");
+
+    bzero(buffer_in, 256);
+
+    n = read(newsockfd, buffer_in, 255);
+    if (n < 0)
+      error("ERROR reading from socket");
+
+    printf("Here is the message: %s\n", buffer_in);
+
+    pcomm = parse(buffer_in, MIN_VALUE, MAX_VALUE, OK);
+
+    printf("command: '%s'\n", pcomm.command);
+    printf("argument: '%s'\n", pcomm.argument);
+
+    if (matches_numeric(pcomm.command, pcomm.argument, "OpenValve"))
     {
-      listen(sockfd, 5);
-      clilen = sizeof(cli_addr);
+      double argument = atof(pcomm.argument);
+      sprintf(buffer_out, "Open#%i!", (int)argument);
+      n = write(newsockfd, buffer_out, strlen(buffer_out));
+    }
+    else if (matches_numeric(pcomm.command, pcomm.argument, "CloseValve"))
+    {
+      double argument = atof(pcomm.argument);
+      sprintf(buffer_out, "Close#%i!", (int)argument);
+      n = write(newsockfd, buffer_out, strlen(buffer_out));
+    }
+    else if (matches_numeric(pcomm.command, pcomm.argument, "SetMax"))
+    {
+      double argument = atof(pcomm.argument);
+      sprintf(buffer_out, "Max#%i!", (int)argument);
+      n = write(newsockfd, buffer_out, strlen(buffer_out));
+    }
+    else if (matches_no_arg(pcomm.command, pcomm.argument, "GetLevel"))
+    {
+      sprintf(buffer_out, "Level#%i!", 100);
+      n = write(newsockfd, buffer_out, strlen(buffer_out));
+    }
+    else if (matches_no_arg(pcomm.command, pcomm.argument, "CommTest"))
+    {
+      sprintf(buffer_out, "Comm#%s!", OK);
+      n = write(newsockfd, buffer_out, strlen(buffer_out));
+    }
+    else if (matches_no_arg(pcomm.command, pcomm.argument, "Start"))
+    {
+      sprintf(buffer_out, "Start#%s!", OK);
+      n = write(newsockfd, buffer_out, strlen(buffer_out));
+    }
+    else if (matches_no_arg(pcomm.command, pcomm.argument, "Exit"))
+    {
+      sprintf(buffer_out, "Exit#%s!", OK);
+      n = write(newsockfd, buffer_out, strlen(buffer_out));
+      break;
+    }
+    else
+    {
+      sprintf(buffer_out, "NoMessageFound!");
+      n = write(newsockfd, buffer_out, strlen(buffer_out));
+    }
 
-      newsockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen);
-      if (newsockfd < 0)
-	error("ERROR on accept");
-
-      bzero(buffer, 256);
-
-      n = read(newsockfd, buffer, 255);
-      if (n < 0)
-	error("ERROR reading from socket");
-
-      printf("Here is the message: %s\n", buffer);
-
-      pcomm = parse(buffer);
-
-      printf("command: '%s'\n", pcomm.command);
-      printf("argument: '%.0f'\n", pcomm.argument);
-      char *response;
-      if(strcmp(pcomm.command,"OpenValve") ==0)
-	{
-	  sprintf(response, "Open#%i!", pcomm.argument);
-	  n=write(newsockfd,response,strlen(response));
-	}
-      else if(strcmp(pcomm.command,"CloseValve") == 0)
-	{
-	  sprintf(response, "Close#%i!", pcomm.argument);
-	  n=write(newsockfd,response,strlen(response));
-	}
-      else if(strcmp(pcomm.command,"GetLevel") == 0)
-	{
-	  sprintf(response, "Level#%i!", pcomm.argument);
-	  n=write(newsockfd,response,strlen(response));
-	}
-      else if(strcmp(pcomm.command,"CommTest") == 0)
-	{
-	  sprintf(response, "Comm#%s!", "OK");
-	  n=write(newsockfd,response,strlen(response));
-	}
-      else if(strcmp(pcomm.command,"SetMax") == 0)
-	{
-	  sprintf(response, "Max#%i!", pcomm.argument);
-	  n=write(newsockfd,response,strlen(response));
-	}
-      else if(strcmp(pcomm.command,"Start") == 0)
-	{
-	  sprintf(response, "Start#%s!", "OK");
-	  n=write(newsockfd,response,strlen(response));
-	}
-      else if(strcmp(pcomm.command, "Exit") == 0)
-	{
-	  break;
-	}
-      else 
-	{
-	  sprintf(response, "NoMessageFound!", 10.2);
-	  n=write(newsockfd,response,strlen(response));
-	}
-
-      if (n < 0)
-	error("ERROR writing to socket");
-    } 
+    if (n < 0)
+      error("ERROR writing to socket");
+  }
 
   close(newsockfd);
   close(sockfd);

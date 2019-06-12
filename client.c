@@ -6,85 +6,11 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include "error.h"
+#include "parse.h"
+#include "comm_consts.h"
 
-typedef struct parsed_command
-{
-  char command[11];
-  double argument;
-} parscomm;
-
-void error(const char *msg)
-{
-  perror(msg);
-  exit(0);
-}
-
-int isNumeric(const char *s){
-  if(s == NULL || *s == '\0' || isspace(*s))
-    return 0;
-  char * p;
-  strtod (s, &p);
-  return *p == '\0';
-}
-
-parscomm parse(char *rawCommand)
-{
-  char *command;
-  char *argument_string;
-  char *string, *tofree;
-  parscomm pcomm;
-
-  tofree = string = strdup(rawCommand);
-
-  if (string == NULL)
-    error("strcpy");
-
-  int length;
-  length = strlen(string);
-  if(string[length-1] != '!')
-    string = "";
-
-  command = strsep(&string, "#!");
-
-  if (string == NULL || *command == '\0')
-    {
-      //error
-      strcpy(pcomm.command, "");
-      pcomm.argument = -1.;
-      
-      free(tofree);
-
-      return pcomm;
-    }
-
-  int diff = string - command;
-
-  if (rawCommand[diff-1] == '!')
-    {
-      strcpy(pcomm.command, command);
-      pcomm.argument = -1.;
-    }
-  if (rawCommand[diff-1] == '#')
-    {
-      argument_string = strsep(&string, "!");
-
-      if (isNumeric(argument_string))
-	{
-	  strcpy(pcomm.command, command);
-	  pcomm.argument = atof(argument_string);
-	}
-      else
-	{
-	  //error
-	  strcpy(pcomm.command, "");
-	  pcomm.argument = -1.;
-	}
-    }
-
-  free(tofree);
-
-  return pcomm;
-}
+#define h_addr h_addr_list[0] /* for backward compatibility */
 
 int main(int argc, char *argv[])
 {
@@ -94,6 +20,8 @@ int main(int argc, char *argv[])
 
   char buffer_in[256];
   char buffer_out[256];
+
+  parscomm pcomm;
 
   if (argc < 3)
   {
@@ -145,14 +73,16 @@ int main(int argc, char *argv[])
 
     printf("%s\n", buffer_in);
 
-    parscomm pcomm;
-    pcomm = parse(buffer_in);
+    pcomm = parse(buffer_in, MIN_VALUE, MAX_VALUE, OK);
 
     printf("command: '%s'\n", pcomm.command);
-    printf("argument: '%.0f'\n", pcomm.argument);
+    printf("argument: '%s'\n", pcomm.argument);
 
     close(sockfd);
-  } while (strcmp(buffer_out, "Exit!") != 0);
+    
+  } while (!matches_arg(pcomm.command, pcomm.argument, "Exit", "OK"));
+
+  printf("Exiting")
 
   return 0;
 }
