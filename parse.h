@@ -1,7 +1,7 @@
 typedef struct parsed_command
 {
-  char command[256];
-  char argument[256];
+  char command[127];
+  char argument[127];
 } parscomm;
 
 int isNumeric(const char *s);

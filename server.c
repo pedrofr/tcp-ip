@@ -11,14 +11,10 @@
 #include "error.h"
 #include "parse.h"
 #include "comm_consts.h"
-#include "simulador.h"
+#include "simulator.h"
 #include <pthread.h>
 
 #define h_addr h_addr_list[0] /* for backward compatibility */
-
-parscomm pcomm;
-pararg parg;
-int mod;
 
 int main(int argc, char *argv[])
 {
@@ -29,23 +25,8 @@ int main(int argc, char *argv[])
   struct sockaddr_in serv_addr, cli_addr;
   int n;
 
-   printf("chegou aqui");
-
-  parg.pcomm = &pcomm;
-  parg.modificado = &mod;
-
-
-   int rc1;
-pthread_t thread1, thread2;
-
-   /* Create independent threads each of which will execute functionC */
-
-   if( (rc1=pthread_create( &thread1, NULL, simulate, NULL)) )
-   {
-      printf("Thread creation failed: %d\n", rc1);
-   }
-
-
+  int errnum;
+  pthread_t simulator_thread;
 
   if (argc < 2)
     error("ERROR, no port provided");
@@ -63,6 +44,23 @@ pthread_t thread1, thread2;
   if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     error("ERROR on binding");
 
+  printf("\nStarting server!\n");
+
+  /* Create independent thread which will execute simulate */
+
+  parscomm pcomm;
+  int mod = 0;
+  pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+  pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+
+  pararg parg = {&pcomm, &mod, &mutex, &cond};
+
+  if ((errnum = pthread_create(&simulator_thread, NULL, simulate, &parg)))
+  {
+    sprintf(buffer_out, "Thread creation failed: %d\n", errnum);
+    error(buffer_out);
+  }
+
   while (1)
   {
     listen(sockfd, 5);
@@ -78,33 +76,31 @@ pthread_t thread1, thread2;
     if (n < 0)
       error("ERROR reading from socket");
 
-    printf("\nRequest: %s\n", buffer_in);
+    printf("\nRequest: '%s'\n", buffer_in);
 
     pcomm = parse(buffer_in, MIN_VALUE, MAX_VALUE, OK);
 
     printf("command: '%s'\n", pcomm.command);
     printf("argument: '%s'\n", pcomm.argument);
-    mod=1;
 
-    while(mod==1);
-  
-    sprintf(buffer_out, "%s#%s!",pcomm.command, pcomm.argument);
+    wait_response(&parg, 0);
+
+    sprintf(buffer_out, "%s#%s!", pcomm.command, pcomm.argument);
     n = write(newsockfd, buffer_out, strlen(buffer_out));
-   
+
     if (n < 0)
       error("ERROR writing to socket");
-   
-    if (matches_arg(pcomm.command, pcomm.argument, "Exit",OK))    
+
+    if (matches_arg(pcomm.command, pcomm.argument, "Exit", OK))
       break;
   }
 
   close(newsockfd);
   close(sockfd);
 
-   pthread_join( thread1, NULL);
-   pthread_join( thread2, NULL); 
+  pthread_join(simulator_thread, NULL);
 
-  printf("\nClosing!\n");
+  printf("\nClosing server!\n");
 
   return 0;
 }

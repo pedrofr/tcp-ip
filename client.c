@@ -29,6 +29,8 @@ int main(int argc, char *argv[])
     exit(0);
   }
 
+  printf("\nStarting client!\n");
+
   portno = atoi(argv[2]);
 
   do
@@ -71,7 +73,7 @@ int main(int argc, char *argv[])
     if (n < 0)
       error("ERROR reading from socket");
 
-    printf("\nResponse: %s\n", buffer_in);
+    printf("\nResponse: '%s'\n", buffer_in);
 
     pcomm = parse(buffer_in, MIN_VALUE, MAX_VALUE, OK);
 
@@ -79,10 +81,10 @@ int main(int argc, char *argv[])
     printf("argument: '%s'\n", pcomm.argument);
 
     close(sockfd);
-    
+
   } while (!matches_arg(pcomm.command, pcomm.argument, "Exit", "OK"));
 
-  printf("\nClosing!\n");
+  printf("\nClosing client!\n");
 
   return 0;
 }
