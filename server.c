@@ -11,8 +11,14 @@
 #include "error.h"
 #include "parse.h"
 #include "comm_consts.h"
+#include "simulador.h"
+#include <pthread.h>
 
 #define h_addr h_addr_list[0] /* for backward compatibility */
+
+parscomm pcomm;
+pararg parg;
+int mod;
 
 int main(int argc, char *argv[])
 {
@@ -22,7 +28,24 @@ int main(int argc, char *argv[])
   char buffer_out[256];
   struct sockaddr_in serv_addr, cli_addr;
   int n;
-  parscomm pcomm;
+
+   printf("chegou aqui");
+
+  parg.pcomm = &pcomm;
+  parg.modificado = &mod;
+
+
+   int rc1;
+pthread_t thread1, thread2;
+
+   /* Create independent threads each of which will execute functionC */
+
+   if( (rc1=pthread_create( &thread1, NULL, simulate, NULL)) )
+   {
+      printf("Thread creation failed: %d\n", rc1);
+   }
+
+
 
   if (argc < 2)
     error("ERROR, no port provided");
@@ -61,58 +84,25 @@ int main(int argc, char *argv[])
 
     printf("command: '%s'\n", pcomm.command);
     printf("argument: '%s'\n", pcomm.argument);
+    mod=1;
 
-    if (matches_numeric(pcomm.command, pcomm.argument, "OpenValve"))
-    {
-      double argument = atof(pcomm.argument);
-      sprintf(buffer_out, "Open#%i!", (int)argument);
-      n = write(newsockfd, buffer_out, strlen(buffer_out));
-    }
-    else if (matches_numeric(pcomm.command, pcomm.argument, "CloseValve"))
-    {
-      double argument = atof(pcomm.argument);
-      sprintf(buffer_out, "Close#%i!", (int)argument);
-      n = write(newsockfd, buffer_out, strlen(buffer_out));
-    }
-    else if (matches_numeric(pcomm.command, pcomm.argument, "SetMax"))
-    {
-      double argument = atof(pcomm.argument);
-      sprintf(buffer_out, "Max#%i!", (int)argument);
-      n = write(newsockfd, buffer_out, strlen(buffer_out));
-    }
-    else if (matches_no_arg(pcomm.command, pcomm.argument, "GetLevel"))
-    {
-      sprintf(buffer_out, "Level#%i!", 100);
-      n = write(newsockfd, buffer_out, strlen(buffer_out));
-    }
-    else if (matches_no_arg(pcomm.command, pcomm.argument, "CommTest"))
-    {
-      sprintf(buffer_out, "Comm#%s!", OK);
-      n = write(newsockfd, buffer_out, strlen(buffer_out));
-    }
-    else if (matches_no_arg(pcomm.command, pcomm.argument, "Start"))
-    {
-      sprintf(buffer_out, "Start#%s!", OK);
-      n = write(newsockfd, buffer_out, strlen(buffer_out));
-    }
-    else if (matches_no_arg(pcomm.command, pcomm.argument, "Exit"))
-    {
-      sprintf(buffer_out, "Exit#%s!", OK);
-      n = write(newsockfd, buffer_out, strlen(buffer_out));
-      break;
-    }
-    else
-    {
-      sprintf(buffer_out, "NoMessageFound!");
-      n = write(newsockfd, buffer_out, strlen(buffer_out));
-    }
-
+    while(mod==1);
+  
+    sprintf(buffer_out, "%s#%s!",pcomm.command, pcomm.argument);
+    n = write(newsockfd, buffer_out, strlen(buffer_out));
+   
     if (n < 0)
       error("ERROR writing to socket");
+   
+    if (matches_arg(pcomm.command, pcomm.argument, "Exit",OK))    
+      break;
   }
 
   close(newsockfd);
   close(sockfd);
+
+   pthread_join( thread1, NULL);
+   pthread_join( thread2, NULL); 
 
   printf("\nClosing!\n");
 
