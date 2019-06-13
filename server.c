@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
     printf("command: '%s'\n", pcomm.command);
     printf("argument: '%s'\n", pcomm.argument);
 
-    wait_response(&parg, 0);
+    wait_response(&parg, SERVER);
 
     sprintf(buffer_out, "%s#%s!", pcomm.command, pcomm.argument);
     n = write(newsockfd, buffer_out, strlen(buffer_out));
