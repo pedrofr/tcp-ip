@@ -9,7 +9,6 @@
 #include <netinet/in.h>
 #include <err.h>
 #include "error.h"
-#include "parse.h"
 #include "comm_consts.h"
 #include "simulator.h"
 #include <pthread.h>
@@ -49,11 +48,10 @@ int main(int argc, char *argv[])
   /* Create independent thread which will execute simulate */
 
   parscomm pcomm;
-  int mod = 0;
   pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
   pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 
-  pararg parg = {&pcomm, &mod, &mutex, &cond};
+  pararg parg = {&pcomm, SERVER, &mutex, &cond};
 
   if ((errnum = pthread_create(&simulator_thread, NULL, simulate, &parg)))
   {
