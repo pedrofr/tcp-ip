@@ -24,6 +24,8 @@ void *plant(void *args)
     strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
 	printf("\nStarting plant at %s!\n", buffer);
 
+	struct timespec sleepTime = {0, 50000000L};
+
 	while (1)
 	{
 		pthread_mutex_lock(ppar->mutex);
@@ -81,7 +83,7 @@ void *plant(void *args)
 		ppar->level = level;
 		pthread_mutex_unlock(ppar->mutex);
 
-		for (int i = 0; i < 100*__INT16_MAX__; i++) { }
+		nanosleep(&sleepTime, NULL);
 	}
 
     time(&timer);

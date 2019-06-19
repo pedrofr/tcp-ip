@@ -25,7 +25,7 @@ void *simulate(void *args)
 
 	int leave = 0;
 	pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-	plantpar ppar = {0, 100, 0, 0, &mutex};
+	plantpar ppar = {0., 100., 0., 0, &mutex};
 
 	pthread_t plant_thread;
 
@@ -36,42 +36,46 @@ void *simulate(void *args)
 		if (matches_numeric(pcomm->command, pcomm->argument, "OpenValve"))
 		{
 			double value = atof(pcomm->argument);
+
 			pthread_mutex_lock(&mutex);
 			ppar.delta += value;
 			pthread_mutex_unlock(&mutex);
+
 			sprintf(pcomm->argument, "%i", (int)value);
 			strcpy(pcomm->command, "Open");
-			// strcpy(pcomm->argument, argument);
 		}
 		else if (matches_numeric(pcomm->command, pcomm->argument, "CloseValve"))
 		{
 			double value = atof(pcomm->argument);
+
 			pthread_mutex_lock(&mutex);
 			ppar.delta -= value;
 			pthread_mutex_unlock(&mutex);
+
 			sprintf(pcomm->argument, "%i", (int)value);
 			strcpy(pcomm->command, "Close");
-			// strcpy(pcomm->argument, argument);
 		}
 		else if (matches_numeric(pcomm->command, pcomm->argument, "SetMax"))
 		{
 			double value = atof(pcomm->argument);
+
 			pthread_mutex_lock(&mutex);
 			ppar.max = value;
 			pthread_mutex_unlock(&mutex);
+
 			sprintf(pcomm->argument, "%i", (int)value);
 			strcpy(pcomm->command, "max");
-			// strcpy(pcomm->argument, argument);
 		}
 		else if (matches_no_arg(pcomm->command, pcomm->argument, "GetLevel"))
 		{
 			int level;
+
 			pthread_mutex_lock(&mutex);
-			level = (int)ppar.level;
+			level = (int)(ppar.level*100);
 			pthread_mutex_unlock(&mutex);
+
 			sprintf(pcomm->argument, "%i", level);
 			strcpy(pcomm->command, "Level");
-			// strcpy(pcomm->argument, argument);
 		}
 		else if (matches_no_arg(pcomm->command, pcomm->argument, "CommTest"))
 		{
@@ -87,14 +91,18 @@ void *simulate(void *args)
 					sprintf(buffer_out, "Thread creation failed: %d\n", errnum);
 					error(buffer_out);
 				}
-				strcpy(pcomm->command, "Start");
-				strcpy(pcomm->argument, OK);
+
+				plant_running = 1;
 			}
+			
+			strcpy(pcomm->command, "Start");
+			strcpy(pcomm->argument, OK);
 		}
 		else if (matches_no_arg(pcomm->command, pcomm->argument, "Exit"))
 		{
 			strcpy(pcomm->command, "Exit");
 			strcpy(pcomm->argument, OK);
+
 			pthread_mutex_lock(&mutex);
 			ppar.leave = leave = 1;
 			pthread_mutex_unlock(&mutex);
