@@ -8,7 +8,7 @@
 
 void *plant(void *args)
 {
-	volatile plantpar *ppar = (plantpar *)args;
+	plantpar *ppar = (plantpar *)args;
 	double in_angle = 50;
 	double level = 0.4;
 	struct timespec time_initial, time_last, time_current;
@@ -18,10 +18,10 @@ void *plant(void *args)
 	time_last = time_current;
 
 	char buffer[26];
-    time_t timer;
-    time(&timer);
-    struct tm* tm_info = localtime(&timer);
-    strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
+	time_t timer;
+	time(&timer);
+	struct tm* tm_info = localtime(&timer);
+	strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
 	printf("\nStarting plant at %s!\n", buffer);
 
 	struct timespec sleepTime = {0, 50000000L};
@@ -74,6 +74,13 @@ void *plant(void *args)
 		level += 0.00002 * dT * (influx - outflux);
 		// level += 0.002 * dT * (influx - outflux);
 
+		//Saturação
+		level = level > 1
+			? 1
+			: level < 0
+				? 0
+				: level;
+
 		printf("\nT: %11.4f | dT: %7.4f", T, dT);
 
 		printf(" | delta: %9.4f | in_angle: %9.4f | level: %7.4f | influx: %f | outflux %f", delta, in_angle, level, influx, outflux);
@@ -86,9 +93,9 @@ void *plant(void *args)
 		nanosleep(&sleepTime, NULL);
 	}
 
-    time(&timer);
-    tm_info = localtime(&timer);
-    strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
+	time(&timer);
+	tm_info = localtime(&timer);
+	strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
 	printf("\nClosing plant at %s!\n", buffer);
 
 	pthread_exit(NULL);
@@ -114,5 +121,5 @@ double out_angle(double time)
 	if (time < 100000)
 		return (40 + 20 * cos((time - 70000) * 2 * M_PI / 10000));
 
-    return 100;
+	return 100;
 }
