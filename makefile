@@ -6,7 +6,7 @@ LIBS = -pthread -lm -lrt -lSDL
 OPTS = -g -Wall -Wextra
 
 _PROG = server client
-_OBJ = error.o parse.o plant.o simulator.o graph.o control_utilities.o
+_OBJ = error.o parse.o plant.o simulator.o graph.o control_utilities.o controller.o
 
 DIRS = $(ODIR) $(BDIR)
 
@@ -32,7 +32,7 @@ $(PROG): $(BDIR)/%: $(ODIR)/%.o $(OBJECTS)
 
 obj: $(OBJECTS) $(POBJ)
 prog: $(PROG)
-     
+
 clean: cleanobj cleanprog
 cleandir:
 	rm -rf $(ODIR) $(BDIR)

@@ -5,10 +5,12 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <pthread.h>
 #include <netdb.h>
 #include "error.h"
 #include "parse.h"
 #include "comm_consts.h"
+#include "control.h"
 
 #define h_addr h_addr_list[0] /* for backward compatibility */
 
@@ -21,17 +23,30 @@ int main(int argc, char *argv[])
   char buffer_in[256];
   char buffer_out[256];
 
-  parscomm pcomm;
-
   if (argc < 3)
   {
     fprintf(stderr, "usage: %s hostname port\n", argv[0]);
     exit(0);
   }
 
+  portno = atoi(argv[2]);
+
   printf("\nStarting client!\n");
 
-  portno = atoi(argv[2]);
+  parscomm pcomm;
+  pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+  pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+
+  pararg parg = {&pcomm, CLIENT, &mutex, &cond};
+
+  pthread_t control_thread;
+
+  int errnum;
+  if ((errnum = pthread_create(&control_thread, NULL, control, &parg)))
+  {
+    sprintf(buffer_out, "Thread creation failed: %d\n", errnum);
+    error(buffer_out);
+  }
 
   do
   {
@@ -80,9 +95,14 @@ int main(int argc, char *argv[])
     printf("command: '%s'\n", pcomm.command);
     printf("argument: '%s'\n", pcomm.argument);
 
+    wait_response(&parg, CLIENT);
+
     close(sockfd);
 
   } while (!matches_arg(pcomm.command, pcomm.argument, "Exit", "OK"));
+
+
+  pthread_join(controller_thread, NULL);
 
   printf("\nClosing client!\n");
 

@@ -29,7 +29,7 @@ void *plant(void *args)
 	strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
 	printf("\nStarting plant at %s!\n", buffer);
 
-	struct timespec sleepTime = {0, 50000000L};
+	struct timespec sleepTime = {0, 10000000L};
 
 	pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 	graphpar gpar = {0., 0., 0., 0., 0, &mutex};
@@ -89,14 +89,14 @@ void *plant(void *args)
 		double out_angle = out_angle_function(T);
 		double outflux = (max / 100) * (level / 1.25 + 0.2) * sin(M_PI / 2 * out_angle / 100);
 		level += 0.00002 * dT * (influx - outflux);
-		// level += 0.002 * dT * (influx - outflux);
+		//level += 0.002 * dT * (influx - outflux);
 
 		//Saturação
 		level = saturate(level, 0, 1, NULL);
 
 		printf("\nT: %11.4f | dT: %7.4f", T, dT);
 
-		printf(" | delta: %9.4f | in_angle: %9.4f | level: %7.4f | influx: %f | outflux %f", delta, in_angle, level, influx, outflux);
+		printf(" | delta: %9.4f | in_angle: %9.4f | out_angle: %9.4f | level: %7.4f | influx: %f | outflux %f", delta, in_angle, out_angle, level, influx, outflux);
 
 		pthread_mutex_lock(ppar->mutex);
 		ppar->delta = delta;
@@ -105,9 +105,9 @@ void *plant(void *args)
 		
 		pthread_mutex_lock(&mutex);
 		gpar.leave = leave;
-		gpar.inangle = in_angle;
-		gpar.outangle = out_angle;
-		gpar.level = level;
+		gpar.var1 = level*100;
+		gpar.var2 = in_angle;
+		gpar.var3 = out_angle;
 		gpar.time = T/1000;
 		pthread_mutex_unlock(&mutex);
 

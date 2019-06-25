@@ -3,3 +3,5 @@
 #define OK "OK"
 #define SERVER 0
 #define SIMULATOR 1
+#define CLIENT 2
+#define CONTROL 3

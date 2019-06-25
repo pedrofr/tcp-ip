@@ -3,29 +3,37 @@
 #include <string.h>
 #include <pthread.h>
 #include "error.h"
-#include "simulator.h"
+#include "control.h"
 #include "comm_consts.h"
 #include "plant.h"
 
-void *simulate(void *args)
+typedef plantpar contpar;
+
+void *control(void *args)
 {
 	pararg *parg = (pararg *)args;
 
 	parscomm *pcomm = parg->pcomm;
 
-	printf("\nStarting simulator!\n");
-
-	int plant_running = 0;
+	printf("\nStarting control!\n");
 
 	int leave = 0;
 	pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-	plantpar ppar = {0., 100., 0., 0, &mutex};
+	contpar cpar = {0., 100., 0., 0, &mutex};
 
-	pthread_t plant_thread;
+	pthread_t controller_thread;
+
+	int errnum;
+	if ((errnum = pthread_create(&controller_thread, NULL, controller, &cpar)))
+	  {
+	    char buffer_out[256];
+	    sprintf(buffer_out, "Thread creation failed: %d\n", errnum);
+	    error(buffer_out);
+	  }
 
 	while (1)
 	{
-		wait_request(parg, SIMULATOR);
+		wait_request(parg, CONTROL);
 
 		if (matches_numeric(pcomm->command, pcomm->argument, "OpenValve"))
 		{
@@ -76,24 +84,6 @@ void *simulate(void *args)
 			strcpy(pcomm->command, "Comm");
 			strcpy(pcomm->argument, OK);
 		}
-		else if (matches_no_arg(pcomm->command, pcomm->argument, "Start"))
-		{
-			if (!plant_running)
-			{
-				int errnum;
-				if ((errnum = pthread_create(&plant_thread, NULL, plant, &ppar)))
-				{
-					char buffer_out[256];
-					sprintf(buffer_out, "Thread creation failed: %d\n", errnum);
-					error(buffer_out);
-				}
-
-				plant_running = 1;
-			}
-			
-			strcpy(pcomm->command, "Start");
-			strcpy(pcomm->argument, OK);
-		}
 		else if (matches_no_arg(pcomm->command, pcomm->argument, "Exit"))
 		{
 			strcpy(pcomm->command, "Exit");
@@ -109,15 +99,15 @@ void *simulate(void *args)
 			strcpy(pcomm->argument, "");
 		}
 
-		release(parg, SIMULATOR);
+		release(parg, CONTROL);
 
 		if (leave)
 			break;
 	}
 
-	pthread_join(plant_thread, NULL);
+	pthread_join(controller_thread, NULL);
 
-	printf("\nClosing simulator!\n");
+	printf("\nClosing control!\n");
 
 	pthread_exit(NULL);
 }

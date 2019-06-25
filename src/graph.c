@@ -43,22 +43,22 @@ typedef struct dataholder {
 
 } Tdataholder;
 
- void c_pixeldraw(Tcanvas *canvas, int x, int y, PixelType color)
+void c_pixeldraw(Tcanvas *canvas, int x, int y, PixelType color)
 {
   *( ((PixelType*)canvas->canvas->pixels) + ((-y+canvas->Yoffset) * canvas->canvas->w + x+ canvas->Xoffset)) = color;
 }
 
- void c_hlinedraw(Tcanvas *canvas, int xstep, int y, PixelType color)
+void c_hlinedraw(Tcanvas *canvas, int xstep, int y, PixelType color)
 {
   int offset =  (-y+canvas->Yoffset) * canvas->canvas->w;
   int x;
 
   for (x = 0; x< canvas->Width+canvas->Xoffset ; x+=xstep) {
-        *( ((PixelType*)canvas->canvas->pixels) + (offset + x)) = color;
+    *( ((PixelType*)canvas->canvas->pixels) + (offset + x)) = color;
   }
 }
 
- void c_vlinedraw(Tcanvas *canvas, int x, int ystep, PixelType color)
+void c_vlinedraw(Tcanvas *canvas, int x, int ystep, PixelType color)
 {
   int offset = x+canvas->Xoffset;
   int y;
@@ -70,7 +70,7 @@ typedef struct dataholder {
 }
 
 
- void c_linedraw(Tcanvas *canvas, double x0, double y0, double x1, double y1, PixelType color) {
+void c_linedraw(Tcanvas *canvas, double x0, double y0, double x1, double y1, PixelType color) {
   double x;
 
   for (x=x0; x<=x1; x+=canvas->Xstep) {
@@ -171,58 +171,58 @@ void quitevent() {
 
 void *graph(void *args)
 {
-	graphpar *gpar = (graphpar *)args;
-	// struct timespec time_initial, time_last, time_current;
+  graphpar *gpar = (graphpar *)args;
+  // struct timespec time_initial, time_last, time_current;
 
-	// clock_gettime(CLOCK_MONOTONIC_RAW, &time_initial);
-	// time_current = time_initial;
-	// time_last = time_current;
+  // clock_gettime(CLOCK_MONOTONIC_RAW, &time_initial);
+  // time_current = time_initial;
+  // time_last = time_current;
 
-	// char buffer[26];
-	// time_t timer;
-	// time(&timer);
-	// struct tm* tm_info = localtime(&timer);
-	// strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
-	// printf("\nStarting graph at %s!\n", buffer);
+  // char buffer[26];
+  // time_t timer;
+  // time(&timer);
+  // struct tm* tm_info = localtime(&timer);
+  // strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
+  // printf("\nStarting graph at %s!\n", buffer);
   
   Tdataholder *data = datainit(640,480,55,110,45,0,0);
 
-	printf("\nStarting graph!\n");
+  printf("\nStarting graph!\n");
 
-	struct timespec sleepTime = {0, 50000000L};
+  struct timespec sleepTime = {0, 50000000L};
 
-	while (1)
-	{
-		pthread_mutex_lock(gpar->mutex);
-		int leave = gpar->leave;
-		double time = gpar->time;
-		double level = gpar->level;
-		double in_angle = gpar->inangle;
-		double out_angle = gpar->outangle;
-		pthread_mutex_unlock(gpar->mutex);
+  while (1)
+    {
+      pthread_mutex_lock(gpar->mutex);
+      int leave = gpar->leave;
+      double time = gpar->time;
+      double var1 = gpar->var1; //level
+      double var2 = gpar->var2; //inangle
+      double var3 = gpar->var3; //outangle
+      pthread_mutex_unlock(gpar->mutex);
 
-    if (leave)
-      break;
+      if (leave)
+	break;
 
-    datadraw(data, time, level, in_angle, out_angle);
+      datadraw(data, time, var1, var2, var3);
 
-		// clock_gettime(CLOCK_MONOTONIC_RAW, &time_current);
-		// double T = (time_current.tv_sec - time_initial.tv_sec) * 1000. + (time_current.tv_nsec - time_initial.tv_nsec) / 1000000.;
-		// double dT = (time_current.tv_sec - time_last.tv_sec) * 1000. + (time_current.tv_nsec - time_last.tv_nsec) / 1000000.;
-		// time_last = time_current;
+      // clock_gettime(CLOCK_MONOTONIC_RAW, &time_current);
+      // double T = (time_current.tv_sec - time_initial.tv_sec) * 1000. + (time_current.tv_nsec - time_initial.tv_nsec) / 1000000.;
+      // double dT = (time_current.tv_sec - time_last.tv_sec) * 1000. + (time_current.tv_nsec - time_last.tv_nsec) / 1000000.;
+      // time_last = time_current;
 
-		if (leave)
-			break;
+      if (leave)
+	break;
 
-		nanosleep(&sleepTime, NULL);
-	}
+      nanosleep(&sleepTime, NULL);
+    }
 
-	// time(&timer);
-	// tm_info = localtime(&timer);
-	// strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
-	// printf("\nClosing plant at %s!\n", buffer);
+  // time(&timer);
+  // tm_info = localtime(&timer);
+  // strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
+  // printf("\nClosing plant at %s!\n", buffer);
 
-	printf("\nClosing graph!\n");
+  printf("\nClosing graph!\n");
 
-	pthread_exit(NULL);
+  pthread_exit(NULL);
 }

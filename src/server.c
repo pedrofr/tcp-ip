@@ -8,10 +8,10 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <err.h>
+#include <pthread.h>
 #include "error.h"
 #include "comm_consts.h"
 #include "simulator.h"
-#include <pthread.h>
 
 #define h_addr h_addr_list[0] /* for backward compatibility */
 
@@ -23,9 +23,6 @@ int main(int argc, char *argv[])
   char buffer_out[256];
   struct sockaddr_in serv_addr, cli_addr;
   int n;
-
-  int errnum;
-  pthread_t simulator_thread;
 
   if (argc < 2)
     error("ERROR, no port provided");
@@ -53,6 +50,9 @@ int main(int argc, char *argv[])
 
   pararg parg = {&pcomm, SERVER, &mutex, &cond};
 
+  pthread_t simulator_thread;
+
+  int errnum;
   if ((errnum = pthread_create(&simulator_thread, NULL, simulate, &parg)))
   {
     sprintf(buffer_out, "Thread creation failed: %d\n", errnum);
