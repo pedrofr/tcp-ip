@@ -3,9 +3,11 @@
 #include <pthread.h>
 #include <time.h>
 #include <math.h>
+#include <stddef.h>
 #include "error.h"
 #include "plant.h"
 #include "graph.h"
+#include "control_utilities.h"
 
 double out_angle_function(double time);
 
@@ -90,11 +92,7 @@ void *plant(void *args)
 		// level += 0.002 * dT * (influx - outflux);
 
 		//Saturação
-		level = level > 1
-			? 1
-			: level < 0
-				? 0
-				: level;
+		level = saturate(level, 0, 1, NULL);
 
 		printf("\nT: %11.4f | dT: %7.4f", T, dT);
 
