@@ -8,7 +8,6 @@
 #include <pthread.h>
 #include <netdb.h>
 #include "error.h"
-#include "parse.h"
 #include "comm_consts.h"
 #include "control.h"
 
@@ -102,7 +101,7 @@ int main(int argc, char *argv[])
   } while (!matches_arg(pcomm.command, pcomm.argument, "Exit", "OK"));
 
 
-  pthread_join(controller_thread, NULL);
+  pthread_join(control_thread, NULL);
 
   printf("\nClosing client!\n");
 

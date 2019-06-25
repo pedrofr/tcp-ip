@@ -6,7 +6,7 @@ LIBS = -pthread -lm -lrt -lSDL
 OPTS = -g -Wall -Wextra
 
 _PROG = server client
-_OBJ = error.o parse.o plant.o simulator.o graph.o control_utilities.o controller.o
+_OBJ = error.o parse.o plant.o simulator.o graph.o control_utilities.o controller.o control.o comm_utils.o
 
 DIRS = $(ODIR) $(BDIR)
 

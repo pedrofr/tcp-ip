@@ -11,6 +11,7 @@
 #include <pthread.h>
 #include "error.h"
 #include "comm_consts.h"
+// #include "comm_utils.h"
 #include "simulator.h"
 
 #define h_addr h_addr_list[0] /* for backward compatibility */

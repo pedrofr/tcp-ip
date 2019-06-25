@@ -4,10 +4,8 @@
 #include <pthread.h>
 #include "error.h"
 #include "control.h"
+#include "controller.h"
 #include "comm_consts.h"
-#include "plant.h"
-
-typedef plantpar contpar;
 
 void *control(void *args)
 {
@@ -40,7 +38,7 @@ void *control(void *args)
 			double value = atof(pcomm->argument);
 
 			pthread_mutex_lock(&mutex);
-			ppar.delta += value;
+			cpar.delta += value;
 			pthread_mutex_unlock(&mutex);
 
 			sprintf(pcomm->argument, "%i", (int)value);
@@ -51,7 +49,7 @@ void *control(void *args)
 			double value = atof(pcomm->argument);
 
 			pthread_mutex_lock(&mutex);
-			ppar.delta -= value;
+			cpar.delta -= value;
 			pthread_mutex_unlock(&mutex);
 
 			sprintf(pcomm->argument, "%i", (int)value);
@@ -62,7 +60,7 @@ void *control(void *args)
 			double value = atof(pcomm->argument);
 
 			pthread_mutex_lock(&mutex);
-			ppar.max = value;
+			cpar.max = value;
 			pthread_mutex_unlock(&mutex);
 
 			sprintf(pcomm->argument, "%i", (int)value);
@@ -73,7 +71,7 @@ void *control(void *args)
 			int level;
 
 			pthread_mutex_lock(&mutex);
-			level = (int)(ppar.level*100);
+			level = (int)(cpar.level*100);
 			pthread_mutex_unlock(&mutex);
 
 			sprintf(pcomm->argument, "%i", level);
@@ -90,7 +88,7 @@ void *control(void *args)
 			strcpy(pcomm->argument, OK);
 
 			pthread_mutex_lock(&mutex);
-			ppar.leave = leave = 1;
+			cpar.leave = leave = 1;
 			pthread_mutex_unlock(&mutex);
 		}
 		else
