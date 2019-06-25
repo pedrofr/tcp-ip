@@ -8,7 +8,7 @@
             "name": "(client) gcc-7 build and debug active file",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${fileDirname}/${fileBasenameNoExtension}",
+            "program": "${fileDirname}/bin/${fileBasenameNoExtension}",
             "args": [
                 "${input:hostname}",
                 "${input:port}"
@@ -25,14 +25,14 @@
                     "ignoreFailures": true
                 }
             ],
-            "preLaunchTask": "gcc-7 build active file",
+            "preLaunchTask": "gcc-7 build client and server",
             "miDebuggerPath": "/usr/bin/gdb"
         },
         {
             "name": "(server) gcc-7 build and debug active file",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${fileDirname}/${fileBasenameNoExtension}",
+            "program": "${fileDirname}/bin/${fileBasenameNoExtension}",
             "args": [
                 "${input:port}"
             ],
@@ -48,7 +48,28 @@
                     "ignoreFailures": true
                 }
             ],
-            "preLaunchTask": "gcc-7 build active file",
+            "preLaunchTask": "gcc-7 build client and server",
+            "miDebuggerPath": "/usr/bin/gdb"
+        },
+        {
+            "name": "(graph) gcc-7 build and debug active file",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${fileDirname}/../bin/${fileBasenameNoExtension}",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "gcc-7 build graph",
             "miDebuggerPath": "/usr/bin/gdb"
         }
     ],

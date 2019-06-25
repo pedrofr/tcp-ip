@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <SDL/SDL.h>
 #include <math.h>
+#include <pthread.h>
+#include <time.h>
+#include "graph.h"
 
 #define SCREEN_W 640 //tamanho da janela que sera criada
 #define SCREEN_H 640
@@ -11,8 +14,6 @@
 //typedef Uint16 PixelType;
 #define BPP 32
 typedef Uint32 PixelType;
-
-
 
 typedef struct canvas {
   SDL_Surface *canvas;
@@ -42,12 +43,12 @@ typedef struct dataholder {
 
 } Tdataholder;
 
-inline void c_pixeldraw(Tcanvas *canvas, int x, int y, PixelType color)
+ void c_pixeldraw(Tcanvas *canvas, int x, int y, PixelType color)
 {
   *( ((PixelType*)canvas->canvas->pixels) + ((-y+canvas->Yoffset) * canvas->canvas->w + x+ canvas->Xoffset)) = color;
 }
 
-inline void c_hlinedraw(Tcanvas *canvas, int xstep, int y, PixelType color)
+ void c_hlinedraw(Tcanvas *canvas, int xstep, int y, PixelType color)
 {
   int offset =  (-y+canvas->Yoffset) * canvas->canvas->w;
   int x;
@@ -57,7 +58,7 @@ inline void c_hlinedraw(Tcanvas *canvas, int xstep, int y, PixelType color)
   }
 }
 
-inline void c_vlinedraw(Tcanvas *canvas, int x, int ystep, PixelType color)
+ void c_vlinedraw(Tcanvas *canvas, int x, int ystep, PixelType color)
 {
   int offset = x+canvas->Xoffset;
   int y;
@@ -69,7 +70,7 @@ inline void c_vlinedraw(Tcanvas *canvas, int x, int ystep, PixelType color)
 }
 
 
-inline void c_linedraw(Tcanvas *canvas, double x0, double y0, double x1, double y1, PixelType color) {
+ void c_linedraw(Tcanvas *canvas, double x0, double y0, double x1, double y1, PixelType color) {
   double x;
 
   for (x=x0; x<=x1; x+=canvas->Xstep) {
@@ -89,8 +90,6 @@ Tcanvas *c_open(int Width, int Height, double Xmax, double Ymax)
 
   canvas->Xext = 10;
   canvas->Yext = 10;
-
-
 
   canvas->Height = Height;
   canvas->Width  = Width; 
@@ -122,23 +121,27 @@ Tdataholder *datainit(int Width, int Height, double Xmax, double Ymax, double Lc
   Tdataholder *data = malloc(sizeof(Tdataholder));
 
 
-  //data->canvas=c_open(Width, Height, Xmax, Ymax);
+  data->canvas=c_open(Width, Height, Xmax, Ymax);
   data->Tcurrent=0;
   data->Lcurrent=Lcurrent;
-  //data->Lcolor= (PixelType) SDL_MapRGB(data->canvas->canvas->format,  255, 180,  0);
+  data->Lcolor= (PixelType) SDL_MapRGB(data->canvas->canvas->format,  255, 180,  0);
   data->INcurrent=INcurrent;
-  //data->INcolor=(PixelType) SDL_MapRGB(data->canvas->canvas->format,  180, 255,  0);
+  data->INcolor=(PixelType) SDL_MapRGB(data->canvas->canvas->format,  180, 255,  0);
   data->OUTcurrent=OUTcurrent;
-  //data->OUTcolor=(PixelType) SDL_MapRGB(data->canvas->canvas->format,  0, 180,  255);
+  data->OUTcolor=(PixelType) SDL_MapRGB(data->canvas->canvas->format,  0, 180,  255);
 
 
   return data;
 }
+
 void setdatacolors(Tdataholder *data, PixelType Lcolor, PixelType INcolor, PixelType OUTcolor) {
   data->Lcolor=Lcolor;
   data->INcolor=INcolor;
   data->OUTcolor=OUTcolor;
 }
+
+
+
 
 void datadraw(Tdataholder *data, double time, double level, double inangle, double outangle) {
   c_linedraw(data->canvas,data->Tcurrent,data->Lcurrent,time,level,data->Lcolor);
@@ -166,26 +169,60 @@ void quitevent() {
 
 }
 
-//
-//
-//
-//
-//
-//
-//
+void *graph(void *args)
+{
+	graphpar *gpar = (graphpar *)args;
+	// struct timespec time_initial, time_last, time_current;
 
-int main( int argc, const char* argv[] ) {
-printf("1\n");	
-  Tdataholder *data;
-  double t=0;
-printf("2\n");	
-  data = datainit(640,480,55,110,45,0,0);
-printf("3\n");	
-  for (t=0;t<50;t+=0.1) {
-    datadraw(data,t,(double)(50+20*cos(t/5)),(double)(70+10*sin(t/10)),(double)(20+5*cos(t/2.5)));
-  }
-printf("4\n");
-  while(1) {
-    quitevent();
-  }
+	// clock_gettime(CLOCK_MONOTONIC_RAW, &time_initial);
+	// time_current = time_initial;
+	// time_last = time_current;
+
+	// char buffer[26];
+	// time_t timer;
+	// time(&timer);
+	// struct tm* tm_info = localtime(&timer);
+	// strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
+	// printf("\nStarting graph at %s!\n", buffer);
+  
+  Tdataholder *data = datainit(640,480,55,110,45,0,0);
+
+	printf("\nStarting graph!\n");
+
+	struct timespec sleepTime = {0, 50000000L};
+
+	while (1)
+	{
+		pthread_mutex_lock(gpar->mutex);
+		int leave = gpar->leave;
+		double time = gpar->time;
+		double level = gpar->level;
+		double in_angle = gpar->inangle;
+		double out_angle = gpar->outangle;
+		pthread_mutex_unlock(gpar->mutex);
+
+    if (leave)
+      break;
+
+    datadraw(data, time, level, in_angle, out_angle);
+
+		// clock_gettime(CLOCK_MONOTONIC_RAW, &time_current);
+		// double T = (time_current.tv_sec - time_initial.tv_sec) * 1000. + (time_current.tv_nsec - time_initial.tv_nsec) / 1000000.;
+		// double dT = (time_current.tv_sec - time_last.tv_sec) * 1000. + (time_current.tv_nsec - time_last.tv_nsec) / 1000000.;
+		// time_last = time_current;
+
+		if (leave)
+			break;
+
+		nanosleep(&sleepTime, NULL);
+	}
+
+	// time(&timer);
+	// tm_info = localtime(&timer);
+	// strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
+	// printf("\nClosing plant at %s!\n", buffer);
+
+	printf("\nClosing graph!\n");
+
+	pthread_exit(NULL);
 }
