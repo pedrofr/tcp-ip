@@ -16,9 +16,6 @@ void *simulate(void *args)
 
 	parscomm *pcomm = parg->pcomm;
 
-	char buffer_out[256];
-	int errnum;
-
 	printf("\nStarting simulator!\n");
 
 	int plant_running = 0;
@@ -86,8 +83,10 @@ void *simulate(void *args)
 		{
 			if (!plant_running)
 			{
+				int errnum;
 				if ((errnum = pthread_create(&plant_thread, NULL, plant, &ppar)))
 				{
+					char buffer_out[256];
 					sprintf(buffer_out, "Thread creation failed: %d\n", errnum);
 					error(buffer_out);
 				}

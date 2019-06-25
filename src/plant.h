@@ -8,4 +8,3 @@ typedef struct plant_parameters
 } plantpar;
 
 void *plant(void *args);
-double out_angle(double time);

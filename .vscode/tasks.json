@@ -18,6 +18,24 @@
             "options": {
                 "cwd": "/usr/bin"
             }
+        },
+        {
+            "type": "shell",
+            "label": "gcc-7 build client and server",
+            "command": "make",
+            "args": [],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            }
+        },
+        {
+            "type": "shell",
+            "label": "gcc-7 build graph",
+            "command": "make",
+            "args": [],
+            "options": {
+                "cwd": "${workspaceFolder}/studies/graphing"
+            }
         }
     ]
 }

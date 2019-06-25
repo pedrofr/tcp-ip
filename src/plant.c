@@ -5,6 +5,9 @@
 #include <math.h>
 #include "error.h"
 #include "plant.h"
+#include "graph.h"
+
+double out_angle_function(double time);
 
 void *plant(void *args)
 {
@@ -26,6 +29,19 @@ void *plant(void *args)
 
 	struct timespec sleepTime = {0, 50000000L};
 
+	pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+	graphpar gpar = {0., 0., 0., 0., 0, &mutex};
+
+	pthread_t graph_thread;
+
+	int errnum;
+	if ((errnum = pthread_create(&graph_thread, NULL, graph, &gpar)))
+	{
+		char buffer_out[256];
+		sprintf(buffer_out, "Thread creation failed: %d\n", errnum);
+		error(buffer_out);
+	}
+
 	while (1)
 	{
 		pthread_mutex_lock(ppar->mutex);
@@ -33,9 +49,6 @@ void *plant(void *args)
 		double delta = ppar->delta;
 		double max = ppar->max;
 		pthread_mutex_unlock(ppar->mutex);
-
-		if (leave)
-			break;
 
 		clock_gettime(CLOCK_MONOTONIC_RAW, &time_current);
 		double T = (time_current.tv_sec - time_initial.tv_sec) * 1000. + (time_current.tv_nsec - time_initial.tv_nsec) / 1000000.;
@@ -70,7 +83,9 @@ void *plant(void *args)
 		}
 
 		double influx = 1 * sin(M_PI / 2 * in_angle / 100);
-		double outflux = (max / 100) * (level / 1.25 + 0.2) * sin(M_PI / 2 * out_angle(T) / 100);
+
+		double out_angle = out_angle_function(T);
+		double outflux = (max / 100) * (level / 1.25 + 0.2) * sin(M_PI / 2 * out_angle / 100);
 		level += 0.00002 * dT * (influx - outflux);
 		// level += 0.002 * dT * (influx - outflux);
 
@@ -89,9 +104,22 @@ void *plant(void *args)
 		ppar->delta = delta;
 		ppar->level = level;
 		pthread_mutex_unlock(ppar->mutex);
+		
+		pthread_mutex_lock(&mutex);
+		gpar.leave = leave;
+		gpar.inangle = in_angle;
+		gpar.outangle = out_angle;
+		gpar.level = level;
+		gpar.time = T/1000;
+		pthread_mutex_unlock(&mutex);
+
+		if (leave)
+			break;
 
 		nanosleep(&sleepTime, NULL);
 	}
+
+	pthread_join(graph_thread, NULL);
 
 	time(&timer);
 	tm_info = localtime(&timer);
@@ -101,7 +129,7 @@ void *plant(void *args)
 	pthread_exit(NULL);
 }
 
-double out_angle(double time)
+double out_angle_function(double time)
 {
 	if (time <= 0)
 		return 50;
