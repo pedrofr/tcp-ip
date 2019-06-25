@@ -1,8 +1,6 @@
 .vscode/ipch/
 .vscode/ipch/*
-client
-server
-*.o
-*.out
+**obj/
+**bin/
 *~*
 *#*
