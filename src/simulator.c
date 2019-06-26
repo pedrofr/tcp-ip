@@ -19,8 +19,6 @@ void *simulate(void *args)
 	int plant_running = 0;
 
 	int leave = 0;
-	pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-	plantpar ppar = {0., 100., 0., 0, &mutex};
 
 	pthread_t plant_thread;
 
@@ -30,47 +28,35 @@ void *simulate(void *args)
 
 		if (matches_numeric(pcomm->command, pcomm->argument, "OpenValve"))
 		{
-			double value = atof(pcomm->argument);
+			int value = atoi(pcomm->argument);
+			update_delta(value);
 
-			pthread_mutex_lock(&mutex);
-			ppar.delta += value;
-			pthread_mutex_unlock(&mutex);
-
-			sprintf(pcomm->argument, "%i", (int)round(value));
 			strcpy(pcomm->command, "Open");
+			sprintf(pcomm->argument, "%i", value);
 		}
 		else if (matches_numeric(pcomm->command, pcomm->argument, "CloseValve"))
 		{
-			double value = atof(pcomm->argument);
+			int value = atoi(pcomm->argument);
+			update_delta(-value);
 
-			pthread_mutex_lock(&mutex);
-			ppar.delta -= value;
-			pthread_mutex_unlock(&mutex);
-
-			sprintf(pcomm->argument, "%i", (int)round(value));
 			strcpy(pcomm->command, "Close");
+			sprintf(pcomm->argument, "%i", value);
 		}
 		else if (matches_numeric(pcomm->command, pcomm->argument, "SetMax"))
 		{
-			double value = atof(pcomm->argument);
+			int value = atoi(pcomm->argument);
+			update_max(value);
 
-			pthread_mutex_lock(&mutex);
-			ppar.max = value;
-			pthread_mutex_unlock(&mutex);
-
-			sprintf(pcomm->argument, "%i", (int)round(value));
-			strcpy(pcomm->command, "max");
+			strcpy(pcomm->command, "Max");
+			sprintf(pcomm->argument, "%i", value);
 		}
 		else if (matches_no_arg(pcomm->command, pcomm->argument, "GetLevel"))
 		{
 			int level;
+			read_level(&level);
 
-			pthread_mutex_lock(&mutex);
-			level = (int)round(ppar.level*100);
-			pthread_mutex_unlock(&mutex);
-
-			sprintf(pcomm->argument, "%i", level);
 			strcpy(pcomm->command, "Level");
+			sprintf(pcomm->argument, "%i", level);
 		}
 		else if (matches_no_arg(pcomm->command, pcomm->argument, "CommTest"))
 		{
@@ -82,9 +68,9 @@ void *simulate(void *args)
 			if (!plant_running)
 			{
 				int errnum;
-				if ((errnum = pthread_create(&plant_thread, NULL, plant, &ppar)))
+				if ((errnum = pthread_create(&plant_thread, NULL, plant, NULL)))
 				{
-					char buffer_out[256];
+					char buffer_out[BUFFER_SIZE];
 					sprintf(buffer_out, "Thread creation failed: %d\n", errnum);
 					error(buffer_out);
 				}
@@ -100,9 +86,7 @@ void *simulate(void *args)
 			strcpy(pcomm->command, "Exit");
 			strcpy(pcomm->argument, OK);
 
-			pthread_mutex_lock(&mutex);
-			ppar.leave = leave = 1;
-			pthread_mutex_unlock(&mutex);
+			leave = 1;
 		}
 		// else
 		// {
@@ -116,6 +100,7 @@ void *simulate(void *args)
 			break;
 	}
 
+	quit_plant();
 	pthread_join(plant_thread, NULL);
 
 	printf("\nClosing simulator!\n");

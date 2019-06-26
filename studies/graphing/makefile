@@ -5,7 +5,7 @@ CC = gcc
 LIBS = -pthread -lm -lrt -lSDL
 OPTS = -g -Wall -Wextra
 
-_PROG = graph
+_PROG = graphics
 _OBJ =
 
 DIRS = $(ODIR) $(BDIR)

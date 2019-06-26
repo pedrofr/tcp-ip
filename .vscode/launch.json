@@ -52,7 +52,7 @@
             "miDebuggerPath": "/usr/bin/gdb"
         },
         {
-            "name": "(graph) gcc-7 build and debug active file",
+            "name": "(graphics) gcc-7 build and debug active file",
             "type": "cppdbg",
             "request": "launch",
             "program": "${fileDirname}/../bin/${fileBasenameNoExtension}",
@@ -69,7 +69,7 @@
                     "ignoreFailures": true
                 }
             ],
-            "preLaunchTask": "gcc-7 build graph",
+            "preLaunchTask": "gcc-7 build graphics",
             "miDebuggerPath": "/usr/bin/gdb"
         }
     ],

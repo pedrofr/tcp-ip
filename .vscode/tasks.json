@@ -30,7 +30,7 @@
         },
         {
             "type": "shell",
-            "label": "gcc-7 build graph",
+            "label": "gcc-7 build graphics",
             "command": "make",
             "args": [],
             "options": {

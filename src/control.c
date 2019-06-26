@@ -15,18 +15,16 @@ void *control(void *args)
 
 	printf("\nStarting control!\n");
 
-	int leave = 0;
-	pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-	contpar cpar = {50, 50, 0, 0, &mutex};
+	contpar cpar = {50, 50, 0};
 
 	pthread_t controller_thread;
 
-	struct timespec sleepTime = {0, 10000000L};
+	struct timespec sleepTime = {0, 5000000L};
 
 	int errnum;
-	if ((errnum = pthread_create(&controller_thread, NULL, controller, &cpar)))
+	if ((errnum = pthread_create(&controller_thread, NULL, controller, NULL)))
 	{
-		char buffer_out[256];
+		char buffer_out[BUFFER_SIZE];
 		sprintf(buffer_out, "Thread creation failed: %d\n", errnum);
 		error(buffer_out);
 	}
@@ -48,24 +46,18 @@ void *control(void *args)
 
 		if (matches_numeric(pcomm->command, pcomm->argument, "Level"))
 		{
-			double value = atof(pcomm->argument);
-
-			pthread_mutex_lock(&mutex);
-			cpar.level = value;
-			pthread_mutex_unlock(&mutex);
+			cpar.level = atof(pcomm->argument);
 		}
 		else if (matches_arg(pcomm->command, pcomm->argument, "Exit", OK))
 		{
-			pthread_mutex_lock(&mutex);
-			cpar.leave = leave = 1;
-			pthread_mutex_unlock(&mutex);
+			release(parg, CONTROL);
+			break;
 		}
 
-		pthread_mutex_lock(&mutex);
+		update_controller(cpar);
+		read_controller(&cpar);
+		
 		int angle_diff = cpar.requested_angle - cpar.reported_angle;
-		pthread_mutex_unlock(&mutex);
-
-    	// printf("\ncpar.requested_angle: '%i'\ncpar.reported_angle '%i", cpar.requested_angle, cpar.reported_angle);
 
 		if (angle_diff > 0)
 		{	
@@ -82,35 +74,24 @@ void *control(void *args)
 
 		if (matches_numeric(pcomm->command, pcomm->argument, "Open"))
 		{
-			double value = atof(pcomm->argument);
-
-			pthread_mutex_lock(&mutex);
-			cpar.reported_angle += value;
-			pthread_mutex_unlock(&mutex);
+			cpar.reported_angle += atof(pcomm->argument);
 		}
 		else if (matches_numeric(pcomm->command, pcomm->argument, "Close"))
 		{
-			double value = atof(pcomm->argument);
-
-			pthread_mutex_lock(&mutex);
-			cpar.reported_angle -= value;
-			pthread_mutex_unlock(&mutex);
+			cpar.reported_angle -= atof(pcomm->argument);
 		}
 		else if (matches_arg(pcomm->command, pcomm->argument, "Exit", OK))
 		{
-			pthread_mutex_lock(&mutex);
-			cpar.leave = leave = 1;
-			pthread_mutex_unlock(&mutex);
-		}
-
-		if (leave) {
 			release(parg, CONTROL);
 			break;
 		}
 
+		update_controller(cpar);
+
 		nanosleep(&sleepTime, NULL);
 	}
 
+	quit_controller();
 	pthread_join(controller_thread, NULL);
 
 	printf("\nClosing control!\n");

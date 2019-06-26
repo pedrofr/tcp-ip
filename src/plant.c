@@ -6,17 +6,23 @@
 #include <stddef.h>
 #include "error.h"
 #include "plant.h"
-#include "graph.h"
+#include "graphics.h"
 #include "control_utilities.h"
+#include "comm_consts.h"
 
 #define LEVEL_RATE 0.00002
 #define VALVE_RATE 0.01
 
-double out_angle_function(double time);
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+static volatile int _leave;
+static volatile double _delta;
+static volatile int _max = 100;
+static volatile int _level;
 
-void *plant(void *args)
+static double out_angle_function(double time);
+
+void *plant()
 {
-	plantpar *ppar = (plantpar *)args;
 	double in_angle = 50;
 	double level = 0.4;
 	struct timespec time_initial, time_last, time_current;
@@ -34,26 +40,23 @@ void *plant(void *args)
 
 	struct timespec sleepTime = {0, 10000000L};
 
-	pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-	graphpar gpar = {0., 0., 0., 0., 0, &mutex};
-
 	pthread_t graph_thread;
 
 	int errnum;
-	if ((errnum = pthread_create(&graph_thread, NULL, graph, &gpar)))
+	if ((errnum = pthread_create(&graph_thread, NULL, graphics, NULL)))
 	{
-		char buffer_out[256];
+		char buffer_out[BUFFER_SIZE];
 		sprintf(buffer_out, "Thread creation failed: %d\n", errnum);
 		error(buffer_out);
 	}
 
 	while (1)
 	{
-		pthread_mutex_lock(ppar->mutex);
-		int leave = ppar->leave;
-		double delta_i = ppar->delta;
-		double max = ppar->max;
-		pthread_mutex_unlock(ppar->mutex);
+		pthread_mutex_lock(&mutex);
+		int leave = _leave;
+		double delta_i = _delta;
+		double max = _max;
+		pthread_mutex_unlock(&mutex);
 
 		clock_gettime(CLOCK_MONOTONIC_RAW, &time_current);
 		double T = (time_current.tv_sec - time_initial.tv_sec) * 1000. + (time_current.tv_nsec - time_initial.tv_nsec) / 1000000.;
@@ -62,11 +65,11 @@ void *plant(void *args)
 
 		double delta_f = delta_i;
 
-		if (delta_f > 0)
+		if (delta_i > 0)
 		{
-			if (delta_f < VALVE_RATE * dT)
+			if (delta_i < VALVE_RATE * dT)
 			{
-				in_angle += delta_f;
+				in_angle += delta_i;
 				delta_f = 0;
 			}
 			else
@@ -75,11 +78,11 @@ void *plant(void *args)
 				delta_f -= VALVE_RATE * dT;
 			}
 		}
-		else if (delta_f < 0)
+		else if (delta_i < 0)
 		{
-			if (delta_f > -VALVE_RATE * dT)
+			if (delta_i > -VALVE_RATE * dT)
 			{
-				in_angle += delta_f;
+				in_angle += delta_i;
 				delta_f = 0;
 			}
 			else
@@ -99,21 +102,14 @@ void *plant(void *args)
 		level = saturate(level, 0, 1, NULL);
 
 		// printf("\nT: %11.4f | dT: %7.4f", T, dT);
-
 		// printf(" | delta_i: %9.4f | in_angle: %9.4f | out_angle: %9.4f | level: %7.4f | influx: %f | outflux %f", delta_i, in_angle, out_angle, level, influx, outflux);
 
-		pthread_mutex_lock(ppar->mutex);
-		ppar->delta += delta_f - delta_i;
-		ppar->level = level;
-		pthread_mutex_unlock(ppar->mutex);
-
 		pthread_mutex_lock(&mutex);
-		gpar.leave = leave;
-		gpar.var1 = level * 100;
-		gpar.var2 = in_angle;
-		gpar.var3 = out_angle;
-		gpar.time = T / 1000;
+		_delta += delta_f - delta_i;
+		_level = (int)round(level * 100);
 		pthread_mutex_unlock(&mutex);
+
+		update_graphics(T / 1000, level * 100, in_angle, out_angle);
 
 		if (leave)
 			break;
@@ -121,6 +117,7 @@ void *plant(void *args)
 		nanosleep(&sleepTime, NULL);
 	}
 
+	quit_graphics();
 	pthread_join(graph_thread, NULL);
 
 	time(&timer);
@@ -131,7 +128,35 @@ void *plant(void *args)
 	pthread_exit(NULL);
 }
 
-double out_angle_function(double time)
+void update_max(int max)
+{
+	pthread_mutex_lock(&mutex);
+	_max = max;
+	pthread_mutex_unlock(&mutex);
+}
+
+void update_delta(int delta)
+{
+	pthread_mutex_lock(&mutex);
+	_delta += delta;
+	pthread_mutex_unlock(&mutex);
+}
+
+void quit_plant()
+{
+	pthread_mutex_lock(&mutex);
+	_leave = 1;
+	pthread_mutex_unlock(&mutex);
+}
+
+void read_level(int *level)
+{
+	pthread_mutex_lock(&mutex);
+	*level = _level;
+	pthread_mutex_unlock(&mutex);
+}
+
+static double out_angle_function(double time)
 {
 	if (time <= 0)
 		return 50;

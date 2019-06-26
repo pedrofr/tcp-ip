@@ -3,7 +3,8 @@
 #include <math.h>
 #include <pthread.h>
 #include <time.h>
-#include "graph.h"
+#include <stdarg.h>
+#include "graphics.h"
 
 #define SCREEN_W 640 //tamanho da janela que sera criada
 #define SCREEN_H 640
@@ -45,12 +46,12 @@ typedef struct dataholder
 
 } Tdataholder;
 
-void c_pixeldraw(Tcanvas *canvas, int x, int y, PixelType color)
+static void c_pixeldraw(Tcanvas *canvas, int x, int y, PixelType color)
 {
   *(((PixelType *)canvas->canvas->pixels) + ((-y + canvas->Yoffset) * canvas->canvas->w + x + canvas->Xoffset)) = color;
 }
 
-void c_hlinedraw(Tcanvas *canvas, int xstep, int y, PixelType color)
+static void c_hlinedraw(Tcanvas *canvas, int xstep, int y, PixelType color)
 {
   int offset = (-y + canvas->Yoffset) * canvas->canvas->w;
   int x;
@@ -61,7 +62,7 @@ void c_hlinedraw(Tcanvas *canvas, int xstep, int y, PixelType color)
   }
 }
 
-void c_vlinedraw(Tcanvas *canvas, int x, int ystep, PixelType color)
+static void c_vlinedraw(Tcanvas *canvas, int x, int ystep, PixelType color)
 {
   int offset = x + canvas->Xoffset;
   int y;
@@ -83,7 +84,7 @@ void c_linedraw(Tcanvas *canvas, double x0, double y0, double x1, double y1, Pix
   }
 }
 
-Tcanvas *c_open(int Width, int Height, double Xmax, double Ymax)
+static Tcanvas *c_open(int Width, int Height, double Xmax, double Ymax)
 {
   int x, y;
   Tcanvas *canvas;
@@ -121,7 +122,7 @@ Tcanvas *c_open(int Width, int Height, double Xmax, double Ymax)
   return canvas;
 }
 
-Tdataholder *datainit(int Width, int Height, double Xmax, double Ymax, double Lcurrent, double INcurrent, double OUTcurrent)
+static Tdataholder *datainit(int Width, int Height, double Xmax, double Ymax, double Lcurrent, double INcurrent, double OUTcurrent)
 {
   Tdataholder *data = malloc(sizeof(Tdataholder));
 
@@ -137,14 +138,14 @@ Tdataholder *datainit(int Width, int Height, double Xmax, double Ymax, double Lc
   return data;
 }
 
-void setdatacolors(Tdataholder *data, PixelType Lcolor, PixelType INcolor, PixelType OUTcolor)
+static void setdatacolors(Tdataholder *data, PixelType Lcolor, PixelType INcolor, PixelType OUTcolor)
 {
   data->Lcolor = Lcolor;
   data->INcolor = INcolor;
   data->OUTcolor = OUTcolor;
 }
 
-void datadraw(Tdataholder *data, double time, double level, double inangle, double outangle)
+static void datadraw(Tdataholder *data, double time, double level, double inangle, double outangle)
 {
   c_linedraw(data->canvas, data->Tcurrent, data->Lcurrent, time, level, data->Lcolor);
   c_linedraw(data->canvas, data->Tcurrent, data->INcurrent, time, inangle, data->INcolor);
@@ -157,7 +158,7 @@ void datadraw(Tdataholder *data, double time, double level, double inangle, doub
   SDL_Flip(data->canvas->canvas);
 }
 
-void quitevent()
+static void quitevent()
 {
   SDL_Event event;
 
@@ -173,9 +174,15 @@ void quitevent()
   }
 }
 
-void *graph(void *args)
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+static volatile int _leave;
+static volatile double _time;
+static volatile double _var1;
+static volatile double _var2;
+static volatile double _var3;
+
+void *graphics()
 {
-  graphpar *gpar = (graphpar *)args;
   // struct timespec time_initial, time_last, time_current;
 
   // clock_gettime(CLOCK_MONOTONIC_RAW, &time_initial);
@@ -187,23 +194,23 @@ void *graph(void *args)
   // time(&timer);
   // struct tm* tm_info = localtime(&timer);
   // strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
-  // printf("\nStarting graph at %s!\n", buffer);
+  // printf("\nStarting graphics at %s!\n", buffer);
 
   Tdataholder *data = datainit(640, 480, 55, 110, 45, 0, 0);
 
-  printf("\nStarting graph!\n");
+  printf("\nStarting graphics!\n");
 
   struct timespec sleepTime = {0, 50000000L};
 
   while (1)
   {
-    pthread_mutex_lock(gpar->mutex);
-    int leave = gpar->leave;
-    double time = gpar->time;
-    double var1 = gpar->var1; //level
-    double var2 = gpar->var2; //inangle
-    double var3 = gpar->var3; //outangle
-    pthread_mutex_unlock(gpar->mutex);
+    pthread_mutex_lock(&mutex);
+    int leave = _leave;
+    double time = _time;
+    double var1 = _var1; //level
+    double var2 = _var2; //inangle
+    double var3 = _var3; //outangle
+    pthread_mutex_unlock(&mutex);
 
     if (leave)
       break;
@@ -226,7 +233,24 @@ void *graph(void *args)
   // strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
   // printf("\nClosing plant at %s!\n", buffer);
 
-  printf("\nClosing graph!\n");
+  printf("\nClosing graphics!\n");
 
   pthread_exit(NULL);
+}
+
+void update_graphics(double time, double var1, double var2, double var3)
+{
+  pthread_mutex_lock(&mutex);
+  _time = time;
+  _var1 = var1; //level
+  _var2 = var2; //inangle
+  _var3 = var3; //outangle
+  pthread_mutex_unlock(&mutex);
+}
+
+void quit_graphics()
+{
+  pthread_mutex_lock(&mutex);
+  _leave = 1;
+  pthread_mutex_unlock(&mutex);
 }
