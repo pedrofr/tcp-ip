@@ -8,7 +8,7 @@
             "name": "(client) gcc-7 build and debug active file",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${fileDirname}/bin/${fileBasenameNoExtension}",
+            "program": "${fileDirname}/../bin/${fileBasenameNoExtension}",
             "args": [
                 "${input:hostname}",
                 "${input:port}"
@@ -32,7 +32,7 @@
             "name": "(server) gcc-7 build and debug active file",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${fileDirname}/bin/${fileBasenameNoExtension}",
+            "program": "${fileDirname}/../bin/${fileBasenameNoExtension}",
             "args": [
                 "${input:port}"
             ],

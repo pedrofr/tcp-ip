@@ -8,11 +8,11 @@
 
 int isNumeric(const char *s)
 {
-    if (s == NULL || *s == '\0' || isspace(*s))
+    if (s == NULL || is_empty(s) || isspace(*s))
         return 0;
     char *p;
     strtod(s, &p);
-    return *p == '\0';
+    return is_empty(p);
 }
 
 int checkRange(double value, double min_range, double max_range)
@@ -33,7 +33,7 @@ int matches_arg(const char *command, const char *argument, const char *desired_c
 
 int matches_no_arg(const char *command, const char *argument, const char *desired_command)
 {
-    return strcmp(command, desired_command) == 0 && *argument == '\0';
+    return strcmp(command, desired_command) == 0 && is_empty(argument);
 }
 
 int matches_numeric(const char *command, const char *argument, const char *desired_command)
@@ -70,7 +70,7 @@ parscomm parse(const char *rawCommand, double min_range, double max_range, const
 
     command = strsep(&string, "#!");
 
-    if (*command == '\0')
+    if (is_empty(command))
     {
         //error
         free(tofree);

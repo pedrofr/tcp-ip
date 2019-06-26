@@ -17,90 +17,98 @@ void *control(void *args)
 
 	int leave = 0;
 	pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-	contpar cpar = {0., 100., 0., 0, &mutex};
+	contpar cpar = {50, 50, 0, 0, &mutex};
 
 	pthread_t controller_thread;
 
+	struct timespec sleepTime = {0, 10000000L};
+
 	int errnum;
 	if ((errnum = pthread_create(&controller_thread, NULL, controller, &cpar)))
-	  {
-	    char buffer_out[256];
-	    sprintf(buffer_out, "Thread creation failed: %d\n", errnum);
-	    error(buffer_out);
-	  }
+	{
+		char buffer_out[256];
+		sprintf(buffer_out, "Thread creation failed: %d\n", errnum);
+		error(buffer_out);
+	}
+
+	while (!matches_arg(pcomm->command, pcomm->argument, "Start", OK))
+	{
+		strcpy(pcomm->command, "Start");
+		strcpy(pcomm->argument, "");
+
+		wait_response(parg, CONTROL);
+	}
 
 	while (1)
 	{
-		wait_request(parg, CONTROL);
+		strcpy(pcomm->command, "GetLevel");
+		strcpy(pcomm->argument, "");
 
-		if (matches_numeric(pcomm->command, pcomm->argument, "OpenValve"))
+		wait_response(parg, CONTROL);
+
+		if (matches_numeric(pcomm->command, pcomm->argument, "Level"))
 		{
 			double value = atof(pcomm->argument);
 
 			pthread_mutex_lock(&mutex);
-			cpar.delta += value;
+			cpar.level = value;
 			pthread_mutex_unlock(&mutex);
-
-			sprintf(pcomm->argument, "%i", (int)value);
-			strcpy(pcomm->command, "Open");
 		}
-		else if (matches_numeric(pcomm->command, pcomm->argument, "CloseValve"))
+		else if (matches_arg(pcomm->command, pcomm->argument, "Exit", OK))
 		{
-			double value = atof(pcomm->argument);
-
-			pthread_mutex_lock(&mutex);
-			cpar.delta -= value;
-			pthread_mutex_unlock(&mutex);
-
-			sprintf(pcomm->argument, "%i", (int)value);
-			strcpy(pcomm->command, "Close");
-		}
-		else if (matches_numeric(pcomm->command, pcomm->argument, "SetMax"))
-		{
-			double value = atof(pcomm->argument);
-
-			pthread_mutex_lock(&mutex);
-			cpar.max = value;
-			pthread_mutex_unlock(&mutex);
-
-			sprintf(pcomm->argument, "%i", (int)value);
-			strcpy(pcomm->command, "max");
-		}
-		else if (matches_no_arg(pcomm->command, pcomm->argument, "GetLevel"))
-		{
-			int level;
-
-			pthread_mutex_lock(&mutex);
-			level = (int)(cpar.level*100);
-			pthread_mutex_unlock(&mutex);
-
-			sprintf(pcomm->argument, "%i", level);
-			strcpy(pcomm->command, "Level");
-		}
-		else if (matches_no_arg(pcomm->command, pcomm->argument, "CommTest"))
-		{
-			strcpy(pcomm->command, "Comm");
-			strcpy(pcomm->argument, OK);
-		}
-		else if (matches_no_arg(pcomm->command, pcomm->argument, "Exit"))
-		{
-			strcpy(pcomm->command, "Exit");
-			strcpy(pcomm->argument, OK);
-
 			pthread_mutex_lock(&mutex);
 			cpar.leave = leave = 1;
 			pthread_mutex_unlock(&mutex);
 		}
-		else
+
+		pthread_mutex_lock(&mutex);
+		int angle_diff = cpar.requested_angle - cpar.reported_angle;
+		pthread_mutex_unlock(&mutex);
+
+    	// printf("\ncpar.requested_angle: '%i'\ncpar.reported_angle '%i", cpar.requested_angle, cpar.reported_angle);
+
+		if (angle_diff > 0)
+		{	
+			strcpy(pcomm->command, "OpenValve");
+			sprintf(pcomm->argument, "%i", angle_diff);
+		}
+		else if (angle_diff < 0)
 		{
-			strcpy(pcomm->command, "NoMessageFound!");
-			strcpy(pcomm->argument, "");
+			strcpy(pcomm->command, "CloseValve");
+			sprintf(pcomm->argument, "%i", -angle_diff);
 		}
 
-		release(parg, CONTROL);
+		wait_response(parg, CONTROL);
 
-		if (leave)
+		if (matches_numeric(pcomm->command, pcomm->argument, "Open"))
+		{
+			double value = atof(pcomm->argument);
+
+			pthread_mutex_lock(&mutex);
+			cpar.reported_angle += value;
+			pthread_mutex_unlock(&mutex);
+		}
+		else if (matches_numeric(pcomm->command, pcomm->argument, "Close"))
+		{
+			double value = atof(pcomm->argument);
+
+			pthread_mutex_lock(&mutex);
+			cpar.reported_angle -= value;
+			pthread_mutex_unlock(&mutex);
+		}
+		else if (matches_arg(pcomm->command, pcomm->argument, "Exit", OK))
+		{
+			pthread_mutex_lock(&mutex);
+			cpar.leave = leave = 1;
+			pthread_mutex_unlock(&mutex);
+		}
+
+		if (leave) {
+			release(parg, CONTROL);
 			break;
+		}
+
+		nanosleep(&sleepTime, NULL);
 	}
 
 	pthread_join(controller_thread, NULL);

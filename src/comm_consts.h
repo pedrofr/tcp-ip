@@ -1,3 +1,5 @@
+#define BUFFER_SIZE 32
+#define HALF_BUFFER_SIZE 15
 #define MAX_VALUE 100.
 #define MIN_VALUE 0.
 #define OK "OK"

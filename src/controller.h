@@ -1,8 +1,8 @@
 typedef struct controller_parameters
 {
-	volatile double delta;
-	volatile double max;
-	volatile double level;
+	volatile int requested_angle;
+	volatile int reported_angle;
+	volatile int level;
 	volatile int leave;
 	pthread_mutex_t *mutex;
 } contpar;

@@ -1,7 +1,11 @@
+#include "comm_consts.h"
+
+#define is_empty(arg) *arg == '\0'
+
 typedef struct parsed_command
 {
-  char command[127];
-  char argument[127];
+  char command[HALF_BUFFER_SIZE];
+  char argument[HALF_BUFFER_SIZE];
 } parscomm;
 
 int isNumeric(const char *s);

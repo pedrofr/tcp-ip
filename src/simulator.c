@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <math.h>
 #include "error.h"
 #include "simulator.h"
 #include "comm_consts.h"
@@ -35,7 +36,7 @@ void *simulate(void *args)
 			ppar.delta += value;
 			pthread_mutex_unlock(&mutex);
 
-			sprintf(pcomm->argument, "%i", (int)value);
+			sprintf(pcomm->argument, "%i", (int)round(value));
 			strcpy(pcomm->command, "Open");
 		}
 		else if (matches_numeric(pcomm->command, pcomm->argument, "CloseValve"))
@@ -46,7 +47,7 @@ void *simulate(void *args)
 			ppar.delta -= value;
 			pthread_mutex_unlock(&mutex);
 
-			sprintf(pcomm->argument, "%i", (int)value);
+			sprintf(pcomm->argument, "%i", (int)round(value));
 			strcpy(pcomm->command, "Close");
 		}
 		else if (matches_numeric(pcomm->command, pcomm->argument, "SetMax"))
@@ -57,7 +58,7 @@ void *simulate(void *args)
 			ppar.max = value;
 			pthread_mutex_unlock(&mutex);
 
-			sprintf(pcomm->argument, "%i", (int)value);
+			sprintf(pcomm->argument, "%i", (int)round(value));
 			strcpy(pcomm->command, "max");
 		}
 		else if (matches_no_arg(pcomm->command, pcomm->argument, "GetLevel"))
@@ -65,7 +66,7 @@ void *simulate(void *args)
 			int level;
 
 			pthread_mutex_lock(&mutex);
-			level = (int)(ppar.level*100);
+			level = (int)round(ppar.level*100);
 			pthread_mutex_unlock(&mutex);
 
 			sprintf(pcomm->argument, "%i", level);
@@ -103,11 +104,11 @@ void *simulate(void *args)
 			ppar.leave = leave = 1;
 			pthread_mutex_unlock(&mutex);
 		}
-		else
-		{
-			strcpy(pcomm->command, "NoMessageFound!");
-			strcpy(pcomm->argument, "");
-		}
+		// else
+		// {
+		// 	strcpy(pcomm->command, "NoMessageFound");
+		// 	strcpy(pcomm->argument, "");
+		// }
 
 		release(parg, SIMULATOR);
 

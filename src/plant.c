@@ -9,6 +9,9 @@
 #include "graph.h"
 #include "control_utilities.h"
 
+#define LEVEL_RATE 0.00002
+#define VALVE_RATE 0.01
+
 double out_angle_function(double time);
 
 void *plant(void *args)
@@ -25,7 +28,7 @@ void *plant(void *args)
 	char buffer[26];
 	time_t timer;
 	time(&timer);
-	struct tm* tm_info = localtime(&timer);
+	struct tm *tm_info = localtime(&timer);
 	strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
 	printf("\nStarting plant at %s!\n", buffer);
 
@@ -48,7 +51,7 @@ void *plant(void *args)
 	{
 		pthread_mutex_lock(ppar->mutex);
 		int leave = ppar->leave;
-		double delta = ppar->delta;
+		double delta_i = ppar->delta;
 		double max = ppar->max;
 		pthread_mutex_unlock(ppar->mutex);
 
@@ -57,30 +60,32 @@ void *plant(void *args)
 		double dT = (time_current.tv_sec - time_last.tv_sec) * 1000. + (time_current.tv_nsec - time_last.tv_nsec) / 1000000.;
 		time_last = time_current;
 
-		if (delta > 0)
+		double delta_f = delta_i;
+
+		if (delta_f > 0)
 		{
-			if (delta < 0.01 * dT)
+			if (delta_f < VALVE_RATE * dT)
 			{
-				in_angle += delta;
-				delta = 0;
+				in_angle += delta_f;
+				delta_f = 0;
 			}
 			else
 			{
-				in_angle += 0.01 * dT;
-				delta -= 0.01 * dT;
+				in_angle += VALVE_RATE * dT;
+				delta_f -= VALVE_RATE * dT;
 			}
 		}
-		else if (delta < 0)
+		else if (delta_f < 0)
 		{
-			if (delta > -0.01 * dT)
+			if (delta_f > -VALVE_RATE * dT)
 			{
-				in_angle += delta;
-				delta = 0;
+				in_angle += delta_f;
+				delta_f = 0;
 			}
 			else
 			{
-				in_angle -= 0.01 * dT;
-				delta += 0.01 * dT;
+				in_angle -= VALVE_RATE * dT;
+				delta_f += VALVE_RATE * dT;
 			}
 		}
 
@@ -88,27 +93,26 @@ void *plant(void *args)
 
 		double out_angle = out_angle_function(T);
 		double outflux = (max / 100) * (level / 1.25 + 0.2) * sin(M_PI / 2 * out_angle / 100);
-		level += 0.00002 * dT * (influx - outflux);
-		//level += 0.002 * dT * (influx - outflux);
+		level += LEVEL_RATE * dT * (influx - outflux);
 
 		//Saturação
 		level = saturate(level, 0, 1, NULL);
 
-		printf("\nT: %11.4f | dT: %7.4f", T, dT);
+		// printf("\nT: %11.4f | dT: %7.4f", T, dT);
 
-		printf(" | delta: %9.4f | in_angle: %9.4f | out_angle: %9.4f | level: %7.4f | influx: %f | outflux %f", delta, in_angle, out_angle, level, influx, outflux);
+		// printf(" | delta_i: %9.4f | in_angle: %9.4f | out_angle: %9.4f | level: %7.4f | influx: %f | outflux %f", delta_i, in_angle, out_angle, level, influx, outflux);
 
 		pthread_mutex_lock(ppar->mutex);
-		ppar->delta = delta;
+		ppar->delta += delta_f - delta_i;
 		ppar->level = level;
 		pthread_mutex_unlock(ppar->mutex);
-		
+
 		pthread_mutex_lock(&mutex);
 		gpar.leave = leave;
-		gpar.var1 = level*100;
+		gpar.var1 = level * 100;
 		gpar.var2 = in_angle;
 		gpar.var3 = out_angle;
-		gpar.time = T/1000;
+		gpar.time = T / 1000;
 		pthread_mutex_unlock(&mutex);
 
 		if (leave)

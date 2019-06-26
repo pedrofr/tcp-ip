@@ -20,8 +20,8 @@ int main(int argc, char *argv[])
 {
   int sockfd, newsockfd, portno;
   socklen_t clilen;
-  char buffer_in[256];
-  char buffer_out[256];
+  char buffer_in[BUFFER_SIZE];
+  char buffer_out[BUFFER_SIZE];
   struct sockaddr_in serv_addr, cli_addr;
   int n;
 
@@ -40,6 +40,13 @@ int main(int argc, char *argv[])
 
   if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     error("ERROR on binding");
+
+  listen(sockfd, 5);
+  clilen = sizeof(cli_addr);
+
+  newsockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen);
+  if (newsockfd < 0)
+    error("ERROR on accept");
 
   printf("\nStarting server!\n");
 
@@ -62,33 +69,28 @@ int main(int argc, char *argv[])
 
   while (1)
   {
-    listen(sockfd, 5);
-    clilen = sizeof(cli_addr);
 
-    newsockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen);
-    if (newsockfd < 0)
-      error("ERROR on accept");
+    bzero(buffer_in, BUFFER_SIZE);
 
-    bzero(buffer_in, 256);
-
-    n = read(newsockfd, buffer_in, 255);
+    n = read(newsockfd, buffer_in, BUFFER_SIZE);
     if (n < 0)
       error("ERROR reading from socket");
 
-    printf("\nRequest: '%s'\n", buffer_in);
+    // printf("\nRequest: '%s'\n", buffer_in);
 
     pcomm = parse(buffer_in, MIN_VALUE, MAX_VALUE, OK);
 
-    printf("command: '%s'\n", pcomm.command);
-    printf("argument: '%s'\n", pcomm.argument);
+    // printf("command: '%s'\n", pcomm.command);
+    // printf("argument: '%s'\n", pcomm.argument);
 
     wait_response(&parg, SERVER);
 
     sprintf(buffer_out, "%s#%s!", pcomm.command, pcomm.argument);
+    // printf("\n1 Response: '%s'\n", buffer_out);
     n = write(newsockfd, buffer_out, strlen(buffer_out));
-
     if (n < 0)
       error("ERROR writing to socket");
+    // printf("\n2 Response: '%s'\n", buffer_out);
 
     if (matches_arg(pcomm.command, pcomm.argument, "Exit", OK))
       break;
