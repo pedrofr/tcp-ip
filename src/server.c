@@ -13,6 +13,7 @@
 #include "comm_consts.h"
 // #include "comm_utils.h"
 #include "simulator.h"
+#include "time_utils.h"
 
 #define h_addr h_addr_list[0] /* for backward compatibility */
 
@@ -26,11 +27,13 @@ int main(int argc, char *argv[])
   int n;
 
   if (argc < 2)
-    error("ERROR, no port provided");
+    errorf("ERROR, no port provided");
+
+  timestamp_printf("Starting server!");
 
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd < 0)
-    error("ERROR opening socket");
+    errorf("ERROR opening socket");
 
   bzero((char *)&serv_addr, sizeof(serv_addr));
   portno = atoi(argv[1]);
@@ -39,16 +42,14 @@ int main(int argc, char *argv[])
   serv_addr.sin_port = htons(portno);
 
   if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
-    error("ERROR on binding");
+    errorf("ERROR on binding");
 
   listen(sockfd, 5);
   clilen = sizeof(cli_addr);
 
   newsockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen);
   if (newsockfd < 0)
-    error("ERROR on accept");
-
-  printf("\nStarting server!\n");
+    errorf("ERROR on accept");
 
   /* Create independent thread which will execute simulate */
 
@@ -63,8 +64,7 @@ int main(int argc, char *argv[])
   int errnum;
   if ((errnum = pthread_create(&simulator_thread, NULL, simulate, &parg)))
   {
-    sprintf(buffer_out, "Thread creation failed: %d\n", errnum);
-    error(buffer_out);
+		errorf("\nThread creation failed: %d\n", errnum);
   }
 
   while (1)
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
 
     n = read(newsockfd, buffer_in, BUFFER_SIZE);
     if (n < 0)
-      error("ERROR reading from socket");
+      errorf("ERROR reading from socket");
 
     // printf("\nRequest: '%s'\n", buffer_in);
 
@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
     // printf("\n1 Response: '%s'\n", buffer_out);
     n = write(newsockfd, buffer_out, strlen(buffer_out));
     if (n < 0)
-      error("ERROR writing to socket");
+      errorf("ERROR writing to socket");
     // printf("\n2 Response: '%s'\n", buffer_out);
 
     if (matches_arg(pcomm.command, pcomm.argument, "Exit", OK))
@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
 
   pthread_join(simulator_thread, NULL);
 
-  printf("\nClosing server!\n");
+  timestamp_printf("Closing server!");
 
   return 0;
 }

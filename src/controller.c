@@ -1,15 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include <time.h>
 #include <math.h>
 #include <stddef.h>
 #include "error.h"
 #include "plant.h"
 #include "graphics.h"
-#include "control_utilities.h"
+#include "control_utils.h"
 #include "controller.h"
 #include "comm_consts.h"
+#include "time_utils.h"
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static volatile int _leave;
@@ -17,35 +17,30 @@ static volatile int _requested_angle;
 static volatile int _reported_angle;
 static volatile int _level;
 
+double pid(double dT, double level, double angle, double reference);
+double bang_bang(double level, double angle, double reference);
+
 void *controller()
 {
-	struct timespec time_initial, time_current;
-	// struct timespec time_last;
+	double angle;
+	double reference = 80;
 
-	clock_gettime(CLOCK_MONOTONIC_RAW, &time_initial);
-	time_current = time_initial;
-	// time_last = time_current;
+	struct timespec time_start, time_last, time_current;
+	struct timespec sleep_time = {0, 20000000L};
 
-	char buffer[26];
-	time_t timer;
-	time(&timer);
-	struct tm *tm_info = localtime(&timer);
-	strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
-	printf("\nStarting controller at %s!\n", buffer);
-
-	struct timespec sleepTime = {0, 20000000L};
+  	timestamp_printf("Starting controller!");
 
 	pthread_t graph_thread;
 
 	int errnum;
 	if ((errnum = pthread_create(&graph_thread, NULL, graphics, NULL)))
 	{
-		char buffer_out[BUFFER_SIZE];
-		sprintf(buffer_out, "Thread creation failed: %d\n", errnum);
-		error(buffer_out);
+		errorf("\nThread creation failed: %d\n", errnum);
 	}
 
-	double angle;
+	now(&time_start);
+	time_last = time_current = time_start;
+	time_last = time_current = time_start;
 
 	while (1)
 	{
@@ -55,25 +50,16 @@ void *controller()
 		double reported_angle = _reported_angle;
 		pthread_mutex_unlock(&mutex);
 
-		clock_gettime(CLOCK_MONOTONIC_RAW, &time_current);
-		double T = (time_current.tv_sec - time_initial.tv_sec) * 1000. + (time_current.tv_nsec - time_initial.tv_nsec) / 1000000.;
-		// double dT = (time_current.tv_sec - time_last.tv_sec) * 1000. + (time_current.tv_nsec - time_last.tv_nsec) / 1000000.;
-		// time_last = time_current;
+		now(&time_current);
+		double T = timediff(time_current, time_start);
+		double dT = timediff(time_current, time_last);
+		time_last = time_current;
 
-		if (level < 80)
-		{
-			angle = 100;
-		}
-		else if (level > 80)
-		{
-			angle = 0;
-		}
+		angle = pid(dT, level, reported_angle, reference);
+		angle = bang_bang(level, reported_angle, reference);
 
-		//TODO: Calculos do controlador
-
-		/* printf("\nT: %11.4f | dT: %7.4f", T, dT); */
-
-		/* printf(" | delta: %9.4f | in_angle: %9.4f | out_angle: %9.4f | level: %7.4f | influx: %f | outflux %f", delta, in_angle, out_angle, level, influx, outflux); */
+		// timestamp_printf("T: %11.4f | dT: %7.4f", T, dT);
+		// printf(" | delta_i: %9.4f | in_angle: %9.4f | out_angle: %9.4f | level: %7.4f | influx: %f | outflux %f", delta_i, in_angle, out_angle, level, influx, outflux);
 
 		pthread_mutex_lock(&mutex);
 		_requested_angle = (int)round(angle);
@@ -84,19 +70,38 @@ void *controller()
 		if (leave)
 			break;
 
-		nanosleep(&sleepTime, NULL);
+		ensure_period(time_current, sleep_time);
 	}
 
 	quit_graphics();
 	pthread_join(graph_thread, NULL);
 
-	time(&timer);
-	tm_info = localtime(&timer);
-	strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
-	printf("\nClosing controller at %s!\n", buffer);
+  	timestamp_printf("Starting controller!");
 
 	pthread_exit(NULL);
 }
+
+double pid(double dT, double level, double angle, double reference)
+{
+	//TODO: Calculos do controlador
+	return dT * reference * angle * level;
+} 
+
+double bang_bang(double level, double angle, double reference)
+{
+	if (level < reference)
+	{
+		return 100;
+	}
+	else if (level > reference)
+	{
+		return 0;
+	}
+	else
+	{
+		return angle;
+	}
+} 
 
 void update_controller(contpar cpar)
 {

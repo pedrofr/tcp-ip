@@ -6,6 +6,7 @@
 #include "control.h"
 #include "controller.h"
 #include "comm_consts.h"
+#include "time_utils.h"
 
 void *control(void *args)
 {
@@ -13,7 +14,7 @@ void *control(void *args)
 
 	parscomm *pcomm = parg->pcomm;
 
-	printf("\nStarting control!\n");
+	timestamp_printf("Starting control!");
 
 	contpar cpar = {50, 50, 0};
 
@@ -24,9 +25,7 @@ void *control(void *args)
 	int errnum;
 	if ((errnum = pthread_create(&controller_thread, NULL, controller, NULL)))
 	{
-		char buffer_out[BUFFER_SIZE];
-		sprintf(buffer_out, "Thread creation failed: %d\n", errnum);
-		error(buffer_out);
+		errorf("\nThread creation failed: %d\n", errnum);
 	}
 
 	while (!matches_arg(pcomm->command, pcomm->argument, "Start", OK))
@@ -94,7 +93,7 @@ void *control(void *args)
 	quit_controller();
 	pthread_join(controller_thread, NULL);
 
-	printf("\nClosing control!\n");
+	timestamp_printf("Closing control!");
 
 	pthread_exit(NULL);
 }

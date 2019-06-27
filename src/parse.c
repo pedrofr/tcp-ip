@@ -18,7 +18,7 @@ int isNumeric(const char *s)
 int checkRange(double value, double min_range, double max_range)
 {
     if (min_range > max_range)
-        error("checkRange limits");
+        errorf("checkRange limits");
 
     int lower = min_range <= value;
     int higher = value <= max_range;
@@ -53,12 +53,12 @@ parscomm parse(const char *rawCommand, double min_range, double max_range, const
     strcpy(pcomm.argument, "");
 
     if (min_range > max_range)
-        error("parse limits");
+        errorf("parse limits");
 
     tofree = string = strdup(rawCommand);
 
     if (string == NULL)
-        error("strcpy");
+        errorf("strcpy");
 
     if (string[strlen(string) - 1] != '!')
     {

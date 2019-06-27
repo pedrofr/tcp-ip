@@ -7,6 +7,7 @@
 #include "simulator.h"
 #include "comm_consts.h"
 #include "plant.h"
+#include "time_utils.h"
 
 void *simulate(void *args)
 {
@@ -14,7 +15,7 @@ void *simulate(void *args)
 
 	parscomm *pcomm = parg->pcomm;
 
-	printf("\nStarting simulator!\n");
+	timestamp_printf("Starting simulator!");
 
 	int plant_running = 0;
 
@@ -70,14 +71,12 @@ void *simulate(void *args)
 				int errnum;
 				if ((errnum = pthread_create(&plant_thread, NULL, plant, NULL)))
 				{
-					char buffer_out[BUFFER_SIZE];
-					sprintf(buffer_out, "Thread creation failed: %d\n", errnum);
-					error(buffer_out);
+					errorf("\nThread creation failed: %d\n", errnum);
 				}
 
 				plant_running = 1;
 			}
-			
+
 			strcpy(pcomm->command, "Start");
 			strcpy(pcomm->argument, OK);
 		}
@@ -103,7 +102,7 @@ void *simulate(void *args)
 	quit_plant();
 	pthread_join(plant_thread, NULL);
 
-	printf("\nClosing simulator!\n");
+	timestamp_printf("Closing simulator!");
 
 	pthread_exit(NULL);
 }

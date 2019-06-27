@@ -1,4 +1,4 @@
-#include "control_utilities.h"
+#include "control_utils.h"
 #include <stddef.h>
 
 double saturate(double value, double min, double max, int *saturated)

@@ -2,9 +2,9 @@
 #include <SDL/SDL.h>
 #include <math.h>
 #include <pthread.h>
-#include <time.h>
 #include <stdarg.h>
 #include "graphics.h"
+#include "time_utils.h"
 
 #define SCREEN_W 640 //tamanho da janela que sera criada
 #define SCREEN_H 640
@@ -198,7 +198,7 @@ void *graphics()
 
   Tdataholder *data = datainit(640, 480, 55, 110, 45, 0, 0);
 
-  printf("\nStarting graphics!\n");
+  timestamp_printf("Starting graphics!");
 
   struct timespec sleepTime = {0, 50000000L};
 
@@ -233,7 +233,7 @@ void *graphics()
   // strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
   // printf("\nClosing plant at %s!\n", buffer);
 
-  printf("\nClosing graphics!\n");
+  timestamp_printf("Closing graphics!");
 
   pthread_exit(NULL);
 }

@@ -1,1 +1,1 @@
-void error(const char *msg);
+void errorf(const char* format, ...);
