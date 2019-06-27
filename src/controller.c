@@ -22,13 +22,13 @@ double bang_bang(double level, double angle, double reference);
 
 void *controller()
 {
+  	timestamp_printf("Starting controller!");
+
 	double angle;
 	double reference = 80;
 
 	struct timespec time_start, time_last, time_current;
 	struct timespec sleep_time = {0, 20000000L};
-
-  	timestamp_printf("Starting controller!");
 
 	pthread_t graph_thread;
 
@@ -76,7 +76,7 @@ void *controller()
 	quit_graphics();
 	pthread_join(graph_thread, NULL);
 
-  	timestamp_printf("Starting controller!");
+  	timestamp_printf("Closing controller!");
 
 	pthread_exit(NULL);
 }

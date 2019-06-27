@@ -23,13 +23,13 @@ static double out_angle_function(double time);
 
 void *plant()
 {
+	timestamp_printf("Starting plant!");
+
 	double in_angle = 50;
 	double level = 0.4;
 
 	struct timespec time_start, time_last, time_current;
 	struct timespec sleep_time = {0, 10000000L};
-
-	timestamp_printf("Starting plant!");
 
 	pthread_t graph_thread;
 

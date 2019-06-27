@@ -51,8 +51,6 @@ int ensure_period(struct timespec time_initial, struct timespec period)
 
     sleep_time.tv_nsec = period.tv_nsec - (time_now.tv_nsec - time_initial.tv_nsec);
     sleep_time.tv_nsec = sleep_time.tv_nsec < 0 ? 0 : sleep_time.tv_nsec;
-
-    // printf("\nsleep: %lis %lins", sleep_time.tv_sec, sleep_time.tv_nsec);
     
     while (nanosleep(&sleep_time, &sleep_time) && timediff(sleep_time, period) < 0);
     

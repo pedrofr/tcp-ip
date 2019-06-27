@@ -19,6 +19,8 @@
 
 int main(int argc, char *argv[])
 {
+  timestamp_printf("Starting server!");
+
   int sockfd, newsockfd, portno;
   socklen_t clilen;
   char buffer_in[BUFFER_SIZE];
@@ -28,8 +30,6 @@ int main(int argc, char *argv[])
 
   if (argc < 2)
     errorf("ERROR, no port provided");
-
-  timestamp_printf("Starting server!");
 
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd < 0)
@@ -76,21 +76,19 @@ int main(int argc, char *argv[])
     if (n < 0)
       errorf("ERROR reading from socket");
 
-    // printf("\nRequest: '%s'\n", buffer_in);
+    // timestamp_printf("\nRequest: '%s'\n", buffer_in);
 
     pcomm = parse(buffer_in, MIN_VALUE, MAX_VALUE, OK);
 
-    // printf("command: '%s'\n", pcomm.command);
-    // printf("argument: '%s'\n", pcomm.argument);
+    // timestamp_printf("command: '%s'\n", pcomm.command);
+    // timestamp_printf("argument: '%s'\n", pcomm.argument);
 
     wait_response(&parg, SERVER);
 
     sprintf(buffer_out, "%s#%s!", pcomm.command, pcomm.argument);
-    // printf("\n1 Response: '%s'\n", buffer_out);
     n = write(newsockfd, buffer_out, strlen(buffer_out));
     if (n < 0)
       errorf("ERROR writing to socket");
-    // printf("\n2 Response: '%s'\n", buffer_out);
 
     if (matches_arg(pcomm.command, pcomm.argument, "Exit", OK))
       break;

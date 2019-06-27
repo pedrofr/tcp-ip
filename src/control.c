@@ -10,17 +10,14 @@
 
 void *control(void *args)
 {
-	pararg *parg = (pararg *)args;
-
-	parscomm *pcomm = parg->pcomm;
-
 	timestamp_printf("Starting control!");
-
+	
+	pararg *parg = (pararg *)args;
+	parscomm *pcomm = parg->pcomm;
 	contpar cpar = {50, 50, 0};
+	struct timespec sleepTime = {0, 5000000L};
 
 	pthread_t controller_thread;
-
-	struct timespec sleepTime = {0, 5000000L};
 
 	int errnum;
 	if ((errnum = pthread_create(&controller_thread, NULL, controller, NULL)))

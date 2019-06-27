@@ -16,6 +16,8 @@
 
 int main(int argc, char *argv[])
 {
+  timestamp_printf("Starting client!");
+
   int sockfd, portno, n;
   struct sockaddr_in serv_addr;
   struct hostent *server;
@@ -30,8 +32,6 @@ int main(int argc, char *argv[])
   }
 
   portno = atoi(argv[2]);
-
-  timestamp_printf("Starting client!");
 
   parscomm pcomm;
   pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -89,23 +89,21 @@ int main(int argc, char *argv[])
       sprintf(buffer_out, "%s#%s!", pcomm.command, pcomm.argument);
     }
 
-    // printf("\n1 Request: '%s'\n", buffer_out);
     n = write(sockfd, buffer_out, strlen(buffer_out));
     if (n < 0)
       errorf("ERROR writing to socket");
-    // printf("\n2 Request: '%s'\n", buffer_out);
 
     bzero(buffer_in, BUFFER_SIZE);
     n = read(sockfd, buffer_in, BUFFER_SIZE);
     if (n < 0)
       errorf("ERROR reading from socket");
 
-    // printf("\nResponse: '%s'\n", buffer_in);
+    // timestamp_printf("\nResponse: '%s'\n", buffer_in);
 
     pcomm = parse(buffer_in, MIN_VALUE, MAX_VALUE, OK);
 
-    // printf("command: '%s'\n", pcomm.command);
-    // printf("argument: '%s'\n", pcomm.argument);
+    // timestamp_printf("command: '%s'\n", pcomm.command);
+    // timestamp_printf("argument: '%s'\n", pcomm.argument);
 
     release(&parg, CLIENT);
 

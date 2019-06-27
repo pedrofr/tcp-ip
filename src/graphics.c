@@ -183,23 +183,9 @@ static volatile double _var3;
 
 void *graphics()
 {
-  // struct timespec time_initial, time_last, time_current;
-
-  // clock_gettime(CLOCK_MONOTONIC_RAW, &time_initial);
-  // time_current = time_initial;
-  // time_last = time_current;
-
-  // char buffer[26];
-  // time_t timer;
-  // time(&timer);
-  // struct tm* tm_info = localtime(&timer);
-  // strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
-  // printf("\nStarting graphics at %s!\n", buffer);
-
-  Tdataholder *data = datainit(640, 480, 55, 110, 45, 0, 0);
-
   timestamp_printf("Starting graphics!");
 
+  Tdataholder *data = datainit(640, 480, 55, 110, 45, 0, 0);
   struct timespec sleepTime = {0, 50000000L};
 
   while (1)
@@ -217,21 +203,11 @@ void *graphics()
 
     datadraw(data, time, var1, var2, var3);
 
-    // clock_gettime(CLOCK_MONOTONIC_RAW, &time_current);
-    // double T = (time_current.tv_sec - time_initial.tv_sec) * 1000. + (time_current.tv_nsec - time_initial.tv_nsec) / 1000000.;
-    // double dT = (time_current.tv_sec - time_last.tv_sec) * 1000. + (time_current.tv_nsec - time_last.tv_nsec) / 1000000.;
-    // time_last = time_current;
-
     if (leave)
       break;
 
     nanosleep(&sleepTime, NULL);
   }
-
-  // time(&timer);
-  // tm_info = localtime(&timer);
-  // strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
-  // printf("\nClosing plant at %s!\n", buffer);
 
   timestamp_printf("Closing graphics!");
 

@@ -11,14 +11,12 @@
 
 void *simulate(void *args)
 {
-	pararg *parg = (pararg *)args;
-
-	parscomm *pcomm = parg->pcomm;
-
 	timestamp_printf("Starting simulator!");
 
-	int plant_running = 0;
+	pararg *parg = (pararg *)args;
+	parscomm *pcomm = parg->pcomm;
 
+	int plant_running = 0;
 	int leave = 0;
 
 	pthread_t plant_thread;
