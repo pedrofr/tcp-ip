@@ -20,7 +20,6 @@ static volatile int _reported_angle;
 static volatile int _level;
 
 double pid(double dT, double level, double reference);
-double bang_bang(double level, double angle, double reference);
 
 void *controller()
 {
@@ -78,34 +77,25 @@ void *controller()
 	pthread_exit(NULL);
 }
 
+
 double pid(double dT, double level, double reference)
 {
-	//TODO: Calculos do controlador
-
 	static double Max_Valve = 100;
 	static double Min_Valve =0;
 	static double error_acceptable = 0.01;
-	static volatile double Kp =100;
-	static volatile double Kd =0;
-	static volatile double Ki =0;
-
-	struct timespec time_up, time_down;
+	static volatile double Kp =22.94;
+	static volatile double Kd =2956.510641;
+	static volatile double Ki =0.00005;
 	static double pre_error =0;
 	static double integral =0;
 	double error;
 	double derivative;
 	double output;
-	static int oscila=0;
-	static double Tu=0;
-	static double Ku=0;
-	static int cont =0;
 	//Beginning of the PID calculations
 	error = reference - level;
 	//If the error is too small then don't integrate
-	if(abs(error) > error_acceptable)
-	{
+	if(abs(error) >error_acceptable)
 		integral = integral +error*dT;
-	}
 	derivative = (error - pre_error)/dT;
     output = Kp*error + Ki*integral +Kd*derivative;
 	//Update error
@@ -120,37 +110,10 @@ double pid(double dT, double level, double reference)
 	{
 		output = Min_Valve;
 	}
-	//Now starts the tuning method of Ziegler-Nichols
-	//If the system don't oscillate keep increasing Kp
-	if(oscila==0)
-	{
-		Kp +=1000;
-	}
-	//If system oscillated above the desired level, indicates oscillation and stops the increment of Kp
-	if(level >reference && cont ==0)
-	{
-		now(&time_up);
-		Ku = Kp;
-		cont=1;
-	}
-	//If the system oscillated downwards calculate the period of the oscillation and the PID constants
-	else if(level<80 &&cont ==1)
-	{
-		oscila =1;	
-		cont++;
-		now(&time_down);
-		Tu = timediff(&time_down,&time_up)/2;
-		Kp = Ku/5;
-		Kd = Ku*Tu/15;
-		Ki = (2/5)*Ku/Tu;	
-	}
-
-	// printf(" | reference: %3.0f | level: %3.0f | error: %3.0f | integral: %9.4f | derivative: %9.4f | output: %9.4f", reference, level, error, integral, derivative, output);
-	// printf("\n");
-	printf(" | Tu: %9.4f | Ku: %9.4f | Kp: %9.4f | Kd: %9.4f | Ki: %9.4f | output: %9.4f | cont: %i\n", Tu, Ku, Kp, Kd, Ki, output, cont);
-
-	return output;	
+	return output;
+	
 } 
+
 
 void update_controller(contpar cpar)
 {
