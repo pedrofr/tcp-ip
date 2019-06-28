@@ -11,13 +11,13 @@
 
 void *simulate(void *args)
 {
-	timestamp_printf("Starting simulator!");
+	timestamp_printf("Starting simulator!\n");
 
 	pararg *parg = (pararg *)args;
 	parscomm *pcomm = parg->pcomm;
 
 	int plant_running = 0;
-	int leave = 0;
+	int quit = 0;
 
 	pthread_t plant_thread;
 
@@ -83,7 +83,7 @@ void *simulate(void *args)
 			strcpy(pcomm->command, "Exit");
 			strcpy(pcomm->argument, OK);
 
-			leave = 1;
+			quit = 1;
 		}
 		// else
 		// {
@@ -93,14 +93,14 @@ void *simulate(void *args)
 
 		release(parg, SIMULATOR);
 
-		if (leave)
+		if (quit)
 			break;
 	}
 
 	quit_plant();
 	pthread_join(plant_thread, NULL);
 
-	timestamp_printf("Closing simulator!");
+	timestamp_printf("Closing simulator!\n");
 
 	pthread_exit(NULL);
 }

@@ -16,7 +16,7 @@
 
 int main(int argc, char *argv[])
 {
-  timestamp_printf("Starting client!");
+  timestamp_printf("Starting client!\n");
 
   int sockfd, portno, n;
   struct sockaddr_in serv_addr;
@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
 
   pthread_join(control_thread, NULL);
 
-  timestamp_printf("Closing client!");
+  timestamp_printf("Closing client!\n");
 
   return 0;
 }

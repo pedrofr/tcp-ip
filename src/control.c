@@ -10,7 +10,7 @@
 
 void *control(void *args)
 {
-	timestamp_printf("Starting control!");
+	timestamp_printf("Starting control!\n");
 	
 	pararg *parg = (pararg *)args;
 	parscomm *pcomm = parg->pcomm;
@@ -90,7 +90,7 @@ void *control(void *args)
 	quit_controller();
 	pthread_join(controller_thread, NULL);
 
-	timestamp_printf("Closing control!");
+	timestamp_printf("Closing control!\n");
 
 	pthread_exit(NULL);
 }

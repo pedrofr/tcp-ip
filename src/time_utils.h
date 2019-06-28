@@ -1,9 +1,12 @@
 #include <time.h>
 
-#define TIMESTAMP_SIZE 26
+typedef struct periodic_timespec
+{
+    struct timespec time_next;
+    struct timespec period;
+} perspec;
 
-size_t get_timestamp(char *timestamp);
-int now(struct timespec *time);
-int ensure_period(struct timespec time_initial, struct timespec period);
-double timediff(struct timespec time1, struct timespec time0);
 int timestamp_printf(const char* format, ...);
+double timediff(const struct timespec *x, const struct timespec *y);
+int now(struct timespec *time);
+int ensure_period(perspec *pspec);

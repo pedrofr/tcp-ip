@@ -174,8 +174,10 @@ static void quitevent()
   }
 }
 
+#define GRAPHICS_PERIOD {0, 50000000L}
+
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-static volatile int _leave;
+static volatile int _quit;
 static volatile double _time;
 static volatile double _var1;
 static volatile double _var2;
@@ -183,33 +185,32 @@ static volatile double _var3;
 
 void *graphics()
 {
-  timestamp_printf("Starting graphics!");
+  timestamp_printf("Starting graphics!\n");
 
   Tdataholder *data = datainit(640, 480, 55, 110, 45, 0, 0);
-  struct timespec sleepTime = {0, 50000000L};
+  int quit = 0;
+  
+	struct timespec time_start;
 
-  while (1)
+	now(&time_start);
+	perspec pspec = {time_start, GRAPHICS_PERIOD};
+
+  while (!quit)
   {
     pthread_mutex_lock(&mutex);
-    int leave = _leave;
+    quit = _quit;
     double time = _time;
     double var1 = _var1; //level
     double var2 = _var2; //inangle
     double var3 = _var3; //outangle
     pthread_mutex_unlock(&mutex);
 
-    if (leave)
-      break;
-
     datadraw(data, time, var1, var2, var3);
 
-    if (leave)
-      break;
-
-    nanosleep(&sleepTime, NULL);
+		ensure_period(&pspec);
   }
 
-  timestamp_printf("Closing graphics!");
+  timestamp_printf("Closing graphics!\n");
 
   pthread_exit(NULL);
 }
@@ -227,6 +228,6 @@ void update_graphics(double time, double var1, double var2, double var3)
 void quit_graphics()
 {
   pthread_mutex_lock(&mutex);
-  _leave = 1;
+  _quit = 1;
   pthread_mutex_unlock(&mutex);
 }

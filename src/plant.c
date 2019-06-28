@@ -12,9 +12,10 @@
 
 #define LEVEL_RATE 0.00002
 #define VALVE_RATE 0.01
+#define PLANT_PERIOD {0, 10000000L}
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-static volatile int _leave;
+static volatile int _quit;
 static volatile double _delta;
 static volatile int _max = 100;
 static volatile int _level;
@@ -23,13 +24,13 @@ static double out_angle_function(double time);
 
 void *plant()
 {
-	timestamp_printf("Starting plant!");
+	timestamp_printf("Starting plant!\n");
 
 	double in_angle = 50;
 	double level = 0.4;
+	int quit = 0;
 
 	struct timespec time_start, time_last, time_current;
-	struct timespec sleep_time = {0, 10000000L};
 
 	pthread_t graph_thread;
 
@@ -41,18 +42,19 @@ void *plant()
 
 	now(&time_start);
 	time_last = time_current = time_start;
-
-	while (1)
+	perspec pspec = {time_start, PLANT_PERIOD};
+	
+	while (!quit)
 	{
 		pthread_mutex_lock(&mutex);
-		int leave = _leave;
+		quit = _quit;
 		double delta_i = _delta;
 		double max = _max;
 		pthread_mutex_unlock(&mutex);
 
 		now(&time_current);
-		double T = timediff(time_current, time_start);
-		double dT = timediff(time_current, time_last);
+		double T = timediff(&time_current, &time_start);
+		double dT = timediff(&time_current, &time_last);
 		time_last = time_current;
 
 		double delta_f = delta_i;
@@ -94,7 +96,7 @@ void *plant()
 		level = saturate(level, 0, 1, NULL);
 
 		// timestamp_printf("T: %11.4f | dT: %7.4f", T, dT);
-		// printf(" | delta_i: %9.4f | in_angle: %9.4f | out_angle: %9.4f | level: %7.4f | influx: %f | outflux %f", delta_i, in_angle, out_angle, level, influx, outflux);
+		// printf(" | delta_i: %9.4f | in_angle: %9.4f | out_angle: %9.4f | level: %7.4f | influx: %f | outflux %f\n", delta_i, in_angle, out_angle, level, influx, outflux);
 
 		pthread_mutex_lock(&mutex);
 		_delta += delta_f - delta_i;
@@ -102,17 +104,14 @@ void *plant()
 		pthread_mutex_unlock(&mutex);
 
 		update_graphics(T / 1000, level * 100, in_angle, out_angle);
-
-		if (leave)
-			break;
 		
-		ensure_period(time_current, sleep_time);
+		ensure_period(&pspec);
 	}
 
 	quit_graphics();
 	pthread_join(graph_thread, NULL);
 
-	timestamp_printf("Closing plant!");
+	timestamp_printf("Closing plant!\n");
 
 	pthread_exit(NULL);
 }
@@ -134,7 +133,7 @@ void update_delta(int delta)
 void quit_plant()
 {
 	pthread_mutex_lock(&mutex);
-	_leave = 1;
+	_quit = 1;
 	pthread_mutex_unlock(&mutex);
 }
 

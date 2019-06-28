@@ -19,7 +19,7 @@
 
 int main(int argc, char *argv[])
 {
-  timestamp_printf("Starting server!");
+  timestamp_printf("Starting server!\n");
 
   int sockfd, newsockfd, portno;
   socklen_t clilen;
@@ -99,7 +99,7 @@ int main(int argc, char *argv[])
 
   pthread_join(simulator_thread, NULL);
 
-  timestamp_printf("Closing server!");
+  timestamp_printf("Closing server!\n");
 
   return 0;
 }
