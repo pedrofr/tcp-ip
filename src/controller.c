@@ -13,17 +13,12 @@
 
 #define CONTROLLER_PERIOD {0, 20000000L}
 
-static double Max_Valve = 100;
-static double Min_Valve =0;
-static double error_acceptable = 0.01;
-static volatile double Kp =100;
-static volatile double Kd =0;
-static volatile double Ki =0;
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static volatile int _quit;
 static volatile int _requested_angle;
 static volatile int _reported_angle;
 static volatile int _level;
+
 double pid(double dT, double level, double reference);
 double bang_bang(double level, double angle, double reference);
 
@@ -64,8 +59,7 @@ void *controller()
 
 		angle = pid(dT, level, reference);
 
-		// timestamp_printf("T: %11.4f | dT: %7.4f", T, dT);
-		// printf(" | delta_i: %9.4f | in_angle: %9.4f | out_angle: %9.4f | level: %7.4f | influx: %f | outflux %f\n", delta_i, in_angle, out_angle, level, influx, outflux);
+		timestamp_printf("T: %11.4f | dT: %7.4f", T, dT);
 
 		pthread_mutex_lock(&mutex);
 		_requested_angle = (int)round(angle);
@@ -87,6 +81,14 @@ void *controller()
 double pid(double dT, double level, double reference)
 {
 	//TODO: Calculos do controlador
+
+	static double Max_Valve = 100;
+	static double Min_Valve =0;
+	static double error_acceptable = 0.01;
+	static volatile double Kp =100;
+	static volatile double Kd =0;
+	static volatile double Ki =0;
+
 	struct timespec time_up, time_down;
 	static double pre_error =0;
 	static double integral =0;
@@ -137,15 +139,18 @@ double pid(double dT, double level, double reference)
 		oscila =1;	
 		cont++;
 		now(&time_down);
-		Tu = timediff(time_down,time_up)/2;
+		Tu = timediff(&time_down,&time_up)/2;
 		Kp = Ku/5;
 		Kd = Ku*Tu/15;
 		Ki = (2/5)*Ku/Tu;	
 	}
-	return output;
-	
-} 
 
+	// printf(" | reference: %3.0f | level: %3.0f | error: %3.0f | integral: %9.4f | derivative: %9.4f | output: %9.4f", reference, level, error, integral, derivative, output);
+	// printf("\n");
+	printf(" | Tu: %9.4f | Ku: %9.4f | Kp: %9.4f | Kd: %9.4f | Ki: %9.4f | output: %9.4f | cont: %i\n", Tu, Ku, Kp, Kd, Ki, output, cont);
+
+	return output;	
+} 
 
 void update_controller(contpar cpar)
 {
