@@ -8,6 +8,8 @@
 
 #define SCREEN_W 640 //tamanho da janela que sera criada
 #define SCREEN_H 640
+#define PADDING_W 100
+#define PADDING_H 10
 
 //#define BPP 8
 //typedef Uint8 PixelType;
@@ -90,11 +92,11 @@ static Tcanvas *c_open(int Width, int Height, double Xmax, double Ymax)
   Tcanvas *canvas;
   canvas = malloc(sizeof(Tcanvas));
 
-  canvas->Xoffset = 10;
+  canvas->Xoffset = PADDING_W;
   canvas->Yoffset = Height;
 
-  canvas->Xext = 10;
-  canvas->Yext = 10;
+  canvas->Xext = PADDING_W;
+  canvas->Yext = PADDING_H;
 
   canvas->Height = Height;
   canvas->Width = Width;
@@ -175,6 +177,8 @@ static void quitevent()
 }
 
 #define GRAPHICS_PERIOD {0, 50000000L}
+#define EPOCH_DURATION 60
+#define EPOCH_DURATION 60
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static volatile int _quit;
@@ -187,8 +191,20 @@ void *graphics()
 {
   timestamp_printf("Starting graphics!\n");
 
-  Tdataholder *data = datainit(640, 480, 55, 110, 45, 0, 0);
-  int quit = 0;
+  int quit = 0, epoch = 0, last_epoch = 0;
+  SDL_Rect future = {PADDING_W, 0, SCREEN_W, SCREEN_H};
+  SDL_Rect past = {SCREEN_W, 0, PADDING_W, SCREEN_H};
+  Tdataholder *data = datainit(SCREEN_W, SCREEN_H, EPOCH_DURATION, 110, 0, 0, 0);
+  SDL_Surface *clean = SDL_CreateRGBSurface(SDL_SWSURFACE | SDL_SRCALPHA,
+    data->canvas->Width + data->canvas->Xext,
+    data->canvas->Height + data->canvas->Yext,
+    32,
+    0xFF000000,
+    0x00FF0000,
+    0x0000FF00,
+    0x000000FF);
+  
+  SDL_BlitSurface(data->canvas->canvas, NULL, clean, NULL);
   
 	struct timespec time_start;
 
@@ -205,10 +221,22 @@ void *graphics()
     double var3 = _var3; //outangle
     pthread_mutex_unlock(&mutex);
 
-    datadraw(data, time, var1, var2, var3);
+    if (last_epoch != (epoch = time/EPOCH_DURATION))
+    {
+      last_epoch = epoch;
+
+      SDL_BlitSurface(data->canvas->canvas, &past, data->canvas->canvas, NULL);
+      SDL_BlitSurface(clean, &future, data->canvas->canvas, &future);
+
+      data->Tcurrent = fmod(time, EPOCH_DURATION);
+    }
+
+    datadraw(data, fmod(time, EPOCH_DURATION), var1, var2, var3);
 
 		ensure_period(&pspec);
   }
+  
+  SDL_Quit();
 
   timestamp_printf("Closing graphics!\n");
 

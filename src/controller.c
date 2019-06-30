@@ -58,7 +58,7 @@ void *controller()
 
 		angle = pid(dT, level, reference);
 
-		timestamp_printf("T: %11.4f | dT: %7.4f", T, dT);
+		timestamp_printf("T: %11.4f | dT: %7.4f\n", T, dT);
 
 		pthread_mutex_lock(&mutex);
 		_requested_angle = (int)round(angle);
