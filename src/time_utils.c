@@ -51,11 +51,12 @@ int timestamp_printf(const char *format, ...)
     va_start(argptr, format);
     vasprintf(&message, format, argptr);
 
-    int ret = printf("[%s] %s", timestamp, message);
+    int ret = printf("\33[2K\r[%s] %s", timestamp, message);
+
+    fflush(stdout);
 
     free(message);
     va_end(argptr);
-
     return ret;
 }
 

@@ -14,5 +14,5 @@ void errorf(const char* format, ...)
   perror(message);
   free(message);
   va_end(argptr);
-  exit(1);
+  exit(EXIT_FAILURE);
 }

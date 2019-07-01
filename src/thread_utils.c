@@ -1,4 +1,4 @@
-#include "comm_utils.h"
+#include "thread_utils.h"
 
 void wait_response(pararg *parg, int id)
 {

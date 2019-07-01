@@ -11,8 +11,7 @@ void Die(char *mess) { perror(mess); exit(1); }
 
 int main(int argc, char *argv[]) {
   int sock;
-  struct sockaddr_in echoserver;
-  struct sockaddr_in echoclient;
+  struct sockaddr_in echoserver, echoclient;
   char buffer[BUFFSIZE];
   unsigned int echolen, clientlen, serverlen;
   int received = 0;
@@ -47,8 +46,7 @@ int main(int argc, char *argv[]) {
 			     &clientlen)) < 0) {
       Die("Failed to receive message");
     }
-    fprintf(stderr,
-	    "Client connected: %s\n", inet_ntoa(echoclient.sin_addr));
+    fprintf(stderr,"Client connected: %s\n", inet_ntoa(echoclient.sin_addr));
     /* Send the message back to client */
     if (sendto(sock, buffer, received, 0,
 	       (struct sockaddr *) &echoclient,
