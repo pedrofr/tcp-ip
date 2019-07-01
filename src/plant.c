@@ -19,6 +19,7 @@ static volatile int _quit;
 static volatile double _delta;
 static volatile int _max = 100;
 static volatile int _level;
+static volatile int _restart;
 
 static double out_angle_function(double time);
 
@@ -50,7 +51,31 @@ void *plant()
 		quit = _quit;
 		double delta_i = _delta;
 		double max = _max;
+		int restart = _restart;
 		pthread_mutex_unlock(&mutex);
+
+		if(restart)
+		{
+			pthread_mutex_lock(&mutex);
+
+			timestamp_printf("Restarting plant!\n");
+			restart_graphics();
+
+			in_angle = 50;
+			level = 0.4;
+			delta_i = _delta = 0;
+			restart = _restart = 0;
+			_level = level;
+
+			now(&time_start);
+			time_last = time_current = time_start;
+			pspec.time_next = time_start;
+
+			while(restarting_graphics());
+			timestamp_printf("Done restarting plant!\n");
+
+			pthread_mutex_unlock(&mutex);
+		}
 
 		now(&time_current);
 		double T = timediff(&time_current, &time_start);
@@ -135,6 +160,22 @@ void quit_plant()
 	pthread_mutex_lock(&mutex);
 	_quit = 1;
 	pthread_mutex_unlock(&mutex);
+}
+
+void restart_plant()
+{
+	pthread_mutex_lock(&mutex);
+	_restart = 1;
+	pthread_mutex_unlock(&mutex);
+}
+
+int restarting_plant()
+{
+	pthread_mutex_lock(&mutex);
+	int restart = _restart;
+	pthread_mutex_unlock(&mutex);
+
+	return restart;
 }
 
 void read_level(int *level)

@@ -186,6 +186,7 @@ static volatile double _time;
 static volatile double _var1;
 static volatile double _var2;
 static volatile double _var3;
+static volatile int _restart;
 
 void *graphics()
 {
@@ -219,7 +220,29 @@ void *graphics()
     double var1 = _var1; //level
     double var2 = _var2; //inangle
     double var3 = _var3; //outangle
+    int restart = _restart;
     pthread_mutex_unlock(&mutex);
+
+    if (restart)
+    {
+        pthread_mutex_lock(&mutex);
+			  timestamp_printf("Restarting graphics!\n");
+
+        quit = epoch = last_epoch = 0;
+        time = _time = 0;
+        var1 = _var1 = 0; //level
+        var2 = _var2 = 0; //inangle
+        var3 = _var3 = 0; //outangle
+        restart = _restart = 0;
+
+        now(&time_start);
+        pspec.time_next = time_start;
+      
+        SDL_BlitSurface(clean, NULL, data->canvas->canvas, NULL);
+
+			  timestamp_printf("Done restarting graphics!\n");
+        pthread_mutex_unlock(&mutex);
+    }
 
     if (last_epoch != (epoch = time/EPOCH_DURATION))
     {
@@ -236,7 +259,7 @@ void *graphics()
 		ensure_period(&pspec);
   }
   
-  SDL_Quit();
+  // SDL_Quit();
 
   timestamp_printf("Closing graphics!\n");
 
@@ -258,4 +281,20 @@ void quit_graphics()
   pthread_mutex_lock(&mutex);
   _quit = 1;
   pthread_mutex_unlock(&mutex);
+}
+
+void restart_graphics()
+{
+	pthread_mutex_lock(&mutex);
+	_restart = 1;
+	pthread_mutex_unlock(&mutex);
+}
+
+int restarting_graphics()
+{
+	pthread_mutex_lock(&mutex);
+	int restart = _restart;
+	pthread_mutex_unlock(&mutex);
+
+  return restart;
 }

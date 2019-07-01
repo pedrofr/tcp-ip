@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
                              (struct sockaddr *)&echoclient,
                              &clientlen)) != echolen)
     {
-      Die("Mismatch in number of received bytes");
+      //Die("Mismatch in number of received bytes");
     }
 
     /* Check that client and server are using same socket */

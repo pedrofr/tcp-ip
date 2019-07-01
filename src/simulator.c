@@ -64,7 +64,12 @@ void *simulate(void *args)
 		}
 		else if (matches_no_arg(pcomm->command, pcomm->argument, "Start"))
 		{
-			if (!plant_running)
+			if (plant_running)
+			{
+				restart_plant();
+				while (restarting_plant());				
+			}
+			else
 			{
 				int errnum;
 				if ((errnum = pthread_create(&plant_thread, NULL, plant, NULL)))

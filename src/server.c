@@ -121,7 +121,14 @@ int main(int argc, char *argv[])
     }
 
     if (matches_arg(pcomm.command, pcomm.argument, "Exit", OK))
+    {
       break;
+    }
+    else if (matches_arg(pcomm.command, pcomm.argument, "Comm", OK))
+    {
+      timestamp_printf("Server reached for 'CommTest' from %s\n", inet_ntoa(echoclient.sin_addr));
+    }
+    
 
     // TCP
     // bzero(buffer_in, BUFFER_SIZE);
