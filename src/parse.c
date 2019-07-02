@@ -45,8 +45,8 @@ void parse(parscomm *pcomm, const char *rawCommand, double min_range, double max
     char *string, *tofree;
 
     //default means error
-    strcpy(pcomm->command, "");
-    strcpy(pcomm->argument, "");
+    empty(pcomm->command);
+    empty(pcomm->argument);
 
     if (min_range > max_range)
         errorf("parse limits");

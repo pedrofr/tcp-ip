@@ -3,7 +3,7 @@
 #define MAX_VALUE 100.
 #define MIN_VALUE 0.
 #define OK "OK"
-#define FREE        0b11111111
+#define ANY         0b11111111
 #define SERVER      0b00000001
 #define SIMULATOR   0b00000010
 #define CLIENT      0b00000100

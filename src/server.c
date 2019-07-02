@@ -26,7 +26,6 @@ int main(int argc, char *argv[])
 
   int sock;
   struct sockaddr_in echoserver, echoclient;
-  char buffer[BUFFER_SIZE];
   unsigned int clientlen, serverlen; //, echolen;
   int received = 0;
 
@@ -48,11 +47,11 @@ int main(int argc, char *argv[])
   if (bind(sock, (struct sockaddr *)&echoserver, serverlen) < 0)
     errorf("Failed to bind server socket");
 
-  parscomm pcomm;
+  parscomm pcomm = {"", ""};
   pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
   pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 
-  pararg parg = {&pcomm, SERVER, &mutex, &cond};
+  pararg parg = {&pcomm, SERVER, ANY, "", &mutex, &cond};
 
   pthread_t simulator_thread;
 
@@ -62,21 +61,21 @@ int main(int argc, char *argv[])
     errorf("\nThread creation failed: %d\n", errnum);
   }
 
-  while (1)
+  while (strcmp(pcomm.command, "Exit"))
   {
     clientlen = sizeof(echoclient);
-    if ((received = recvfrom(sock, buffer, BUFFER_SIZE, 0,
+    if ((received = recvfrom(sock, parg.buffer, BUFFER_SIZE, 0,
                              (struct sockaddr *)&echoclient,
                              &clientlen)) < 0)
     {
       errorf("Failed to receive message");
     }
 
-    buffer[received] = '\0';
+    parg.buffer[received] = '\0';
     // printf("Client connected: %s\n", inet_ntoa(echoclient.sin_addr));
-    // printf("Message: %s\n", buffer);
+    // printf("Message: %s\n", parg.buffer);
 
-    parse(&pcomm, buffer, MIN_VALUE, MAX_VALUE, OK);
+    parse(&pcomm, parg.buffer, MIN_VALUE, MAX_VALUE, OK);
 
 		if (matches_no_arg(pcomm.command, pcomm.argument, "CommTest"))
 		{
@@ -89,21 +88,15 @@ int main(int argc, char *argv[])
       wait_response(&parg, SERVER);
     }
     
-    
-    sprintf(buffer, "%s#%s!", pcomm.command, pcomm.argument);
+    sprintf(parg.buffer, "%s#%s!", pcomm.command, pcomm.argument);
 
-    int bufferlen = strlen(buffer);
+    int bufferlen = strlen(parg.buffer);
     /* Send the message back to client */
-    if (sendto(sock, buffer, bufferlen, 0,
+    if (sendto(sock, parg.buffer, bufferlen, 0,
                (struct sockaddr *)&echoclient,
                sizeof(echoclient)) != bufferlen)
     {
       errorf("Mismatch in number of bytes sent");
-    }
-
-    if (matches_arg(pcomm.command, pcomm.argument, "Exit", OK))
-    {
-      break;
     }
   }
 

@@ -109,12 +109,13 @@ void *keyboard_handler(void *args)
       // fgets(buffer, BUFFER_SIZE, stdin);
       while ((c = getchar()) != '\n' && c != EOF);
 
-      timestamp_force_printf("Command was: %s\n", buffer);
-
       request_ownership(parg, TERMINAL);
       if(!quit)
         parse(pcomm, buffer, MIN_VALUE, MAX_VALUE, OK);
-		  grant_ownership(parg, CLIENT);
+
+      wait_for_response(parg, TERMINAL, CLIENT);
+      timestamp_force_printf("Server responded: %s\n", parg->buffer);
+      grant_ownership(parg, TERMINAL, CONTROL);
 
       restore_timed_output();
       printf("\nPress [crtl]+[m] or [enter] to enter manual command.\n\r\033[2A");

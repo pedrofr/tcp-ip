@@ -21,6 +21,10 @@
 
 #define h_addr h_addr_list[0] /* for backward compatibility */
 
+#define NOWAIT \
+  {            \
+    0, 0       \
+  }
 #define TIMEOUT  \
   {              \
     0, 50000000L \
@@ -28,18 +32,20 @@
 
 int main(int argc, char *argv[])
 {
-  // int s = 0;
-
   timestamp_printf("Starting client!\n");
 
   int sock, ready;
   struct sockaddr_in echoserver;
   struct sockaddr_in echoclient;
   struct hostent *server;
-  char buffer[BUFFER_SIZE];
   unsigned int echolen, clientlen;
   int received = 0;
-  struct timespec timeout = TIMEOUT;
+  struct timespec timeout = TIMEOUT, nowait = NOWAIT;
+
+  parscomm pcomm = {"", ""};
+  pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+  pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+  pararg parg = {&pcomm, ANY, ANY, "", &mutex, &cond};
 
   if (argc < 3)
   {
@@ -91,7 +97,7 @@ int main(int argc, char *argv[])
     if ((ready = ppoll(&fds, 1, &timeout, NULL)))
     {
       clientlen = sizeof(echoclient);
-      received = recvfrom(sock, buffer, BUFFER_SIZE, 0,
+      received = recvfrom(sock, parg.buffer, BUFFER_SIZE, 0,
                           (struct sockaddr *)&echoclient,
                           &clientlen);
 
@@ -101,26 +107,20 @@ int main(int argc, char *argv[])
         errorf("Received a packet from an unexpected server");
       }
 
-      buffer[received] = '\0';
+      parg.buffer[received] = '\0';
 
-      if (strcmp(buffer, "Comm#OK!") == 0)
+      if (strcmp(parg.buffer, "Comm#OK!") == 0)
       {
         break;
       }
       else
       {
-        errorf("Received an unrecognized message from server (%s)", buffer);
+        errorf("Received an unrecognized message from server (%s)", parg.buffer);
       }
     }
   }
 
   timestamp_printf("Server found!\n");
-
-  parscomm pcomm = {"", ""};
-  pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-  pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
-
-  pararg parg = {&pcomm, FREE, &mutex, &cond};
 
   int errnum;
 
@@ -131,36 +131,35 @@ int main(int argc, char *argv[])
     errorf("\nThread creation failed: %d\n", errnum);
   }
 
-  while (!matches_arg(pcomm.command, pcomm.argument, "Exit", "OK"))
+  while (loading_control())
+    ;
+
+  while (strcmp(pcomm.command, "Exit"))
   {
     request_ownership(&parg, CLIENT);
 
     if (is_empty(pcomm.command))
     {
-      grant_ownership(&parg, CONTROL);
+      empty(pcomm.command);
+      empty(pcomm.argument);
+      timestamp_printf("granter: %u\n", parg.granter & (CONTROL | TERMINAL));
+      timestamp_printf("me: %u\n", parg.holder);
+      grant_ownership(&parg, CLIENT, parg.granter & (CONTROL | TERMINAL));
       continue;
     }
     if (is_empty(pcomm.argument))
     {
-      sprintf(buffer, "%s!", pcomm.command);
+      sprintf(parg.buffer, "%s!", pcomm.command);
     }
     else
     {
-      sprintf(buffer, "%s#%s!", pcomm.command, pcomm.argument);
+      sprintf(parg.buffer, "%s#%s!", pcomm.command, pcomm.argument);
     }
 
-    // if (s > 1000)
-    // {
-    //   strcpy(pcomm.command, "Exit");
-    //   strcpy(pcomm.argument, "");
-    //   sprintf(buffer, "%s!", pcomm.command);
-    // }
-    // s++;
-
     /* Send the word to the server */
-    echolen = strlen(buffer);
+    echolen = strlen(parg.buffer);
 
-    int n = sendto(sock, buffer, echolen, 0,
+    int n = sendto(sock, parg.buffer, echolen, 0,
                    (struct sockaddr *)&echoserver,
                    sizeof(echoserver));
 
@@ -170,30 +169,58 @@ int main(int argc, char *argv[])
       errorf("Mismatch in number of sent bytes");
     }
 
-    if ((ready = ppoll(&fds, 1, &timeout, NULL)))
+    empty(parg.buffer);
+    unsigned char read = 0;
+    if ((ready = ppoll(&fds, 1, &nowait, NULL)))
     {
-      received = recvfrom(sock, buffer, BUFFER_SIZE, 0,
+      do
+      {
+        received = recvfrom(sock, parg.buffer, BUFFER_SIZE, 0,
+                            (struct sockaddr *)&echoclient,
+                            &clientlen);
+
+        read = 1;
+      } while ((ready = ppoll(&fds, 1, &nowait, NULL)));
+    }
+    else if ((ready = ppoll(&fds, 1, &timeout, NULL)))
+    {
+      received = recvfrom(sock, parg.buffer, BUFFER_SIZE, 0,
                           (struct sockaddr *)&echoclient,
                           &clientlen);
-
+                          
+      read = 1;
+    }
+    if (read)
+    {
       /* Check that client and server are using same socket */
       if (echoserver.sin_addr.s_addr != echoclient.sin_addr.s_addr)
       {
         errorf("Received a packet from an unexpected server");
       }
 
-      buffer[received] = '\0'; /* Assure null terminated string */
-      // printf("Received: %s\n", buffer);
+      parg.buffer[received] = '\0'; /* Assure null terminated string */
+
+      char oldcomm[HALF_BUFFER_SIZE];
+      strcpy(oldcomm, pcomm.command);
+
+      parse(&pcomm, parg.buffer, MIN_VALUE, MAX_VALUE, OK);
+
+      if (!is_empty(pcomm.command) && strstr(oldcomm, pcomm.command) == NULL)
+      {
+        timestamp_printf("oldcomm: %s | pcomm.command: %s | parg.buffer: %s\n", oldcomm, pcomm.command, parg.buffer);
+        empty(pcomm.command);
+        empty(pcomm.argument);
+      }
+    }
+    else
+    {
+      timestamp_printf("pcomm.command: %s | pcomm.argument: %s\n", pcomm.command, pcomm.argument);
+      empty(pcomm.command);
+      empty(pcomm.argument);
+      timestamp_printf("pcomm.command: %s | pcomm.argument: %s\n", pcomm.command, pcomm.argument);
     }
 
-    // timestamp_printf("\nResponse: '%s'\n", buffer_in);
-
-    parse(&pcomm, buffer, MIN_VALUE, MAX_VALUE, OK);
-
-    // timestamp_printf("command: '%s'\n", pcomm.command);
-    // timestamp_printf("argument: '%s'\n", pcomm.argument);
-
-    grant_ownership(&parg, CONTROL);
+    grant_ownership(&parg, CLIENT, parg.granter & (CONTROL | TERMINAL));
   }
 
   close(sock);

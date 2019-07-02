@@ -9,6 +9,8 @@
 #include "time_utils.h"
 #include "terminal_utilities.h"
 
+static volatile char load = 1;
+
 void *control(void *args)
 {
 	timestamp_printf("Starting control!\n");
@@ -26,35 +28,36 @@ void *control(void *args)
 		errorf("\nThread creation failed: %d\n", errnum);
 	}
 
-	while(loading_controller());
+	while (loading_controller());
 
 	pthread_t keyboard_thread;
 	if ((errnum = pthread_create(&keyboard_thread, NULL, keyboard_handler, parg)))
 	{
 		errorf("\nThread creation failed: %d\n", errnum);
 	}
-
+	
 	request_ownership(parg, CONTROL);
+	load = 0;
 	while (!matches_arg(pcomm->command, pcomm->argument, "Start", OK))
 	{
 		strcpy(pcomm->command, "Start");
-		strcpy(pcomm->argument, "");
+		empty(pcomm->argument);
 
-		wait_for_response(parg, CLIENT, CONTROL);
+		wait_for_response(parg, CONTROL, CLIENT);
 	}
 
-	while (!matches_arg(pcomm->command, pcomm->argument, "Exit", OK))
+	while (strcmp(pcomm->command, "Exit"))
 	{
 		strcpy(pcomm->command, "GetLevel");
-		strcpy(pcomm->argument, "");
+		empty(pcomm->argument);
 
-		wait_for_response(parg, CLIENT, CONTROL);
+		wait_for_response(parg, CONTROL, CLIENT);
 
 		if (matches_numeric(pcomm->command, pcomm->argument, "Level"))
 		{
 			cpar.level = atof(pcomm->argument);
 		}
-		else if (matches_arg(pcomm->command, pcomm->argument, "Exit", OK))
+		else if (!strcmp(pcomm->command, "Exit"))
 		{
 			break;
 		}
@@ -74,7 +77,7 @@ void *control(void *args)
 			sprintf(pcomm->argument, "%i", -angle_diff);
 		}
 
-		wait_for_response(parg, CLIENT, CONTROL);
+		wait_for_response(parg, CONTROL, CLIENT);
 
 		if (matches_numeric(pcomm->command, pcomm->argument, "Open"))
 		{
@@ -84,14 +87,14 @@ void *control(void *args)
 		{
 			cpar.reported_angle -= atof(pcomm->argument);
 		}
-		else if (matches_arg(pcomm->command, pcomm->argument, "Exit", OK))
+		else if (!strcmp(pcomm->command, "Exit"))
 		{
 			break;
 		}
 
 		update_controller(&cpar);
 		
-		grant_ownership(parg, CONTROL | TERMINAL);
+		grant_ownership(parg, CONTROL, CONTROL | TERMINAL);
 
 		nanosleep(&sleepTime, NULL);
 
@@ -102,12 +105,17 @@ void *control(void *args)
 	pthread_join(controller_thread, NULL);
 
 	quit_keyboard_handler();
-	grant_ownership(parg, TERMINAL);
+	grant_ownership(parg, CONTROL, TERMINAL);
 	pthread_join(keyboard_thread, NULL);
 
-	grant_ownership(parg, CLIENT);
+	grant_ownership(parg, CONTROL, CLIENT);
 
 	timestamp_printf("Closing control!\n");
 
 	pthread_exit(NULL);
+}
+
+char loading_control()
+{
+	return load;
 }

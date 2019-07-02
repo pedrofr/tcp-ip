@@ -1,6 +1,7 @@
 #include "comm_consts.h"
 
-#define is_empty(arg) *arg == '\0'
+#define is_empty(arg) *(arg) == '\0'
+#define empty(arg) *(arg) = '\0'
 
 typedef struct parsed_command
 {

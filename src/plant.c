@@ -68,7 +68,7 @@ void *plant()
 			time_last = time_current = time_start;
 			pspec.time_next = time_start;
 
-			while(loading_graphics());
+			while (loading_graphics());
 			timestamp_printf("Done restarting plant!\n");
 
 			pthread_mutex_unlock(&mutex);

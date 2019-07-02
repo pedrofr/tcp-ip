@@ -159,7 +159,7 @@ void datadraw(Tdataholder *data, double time, double level, double inangle, doub
 void quitevent() {
   SDL_Event event;
 
-  while(SDL_PollEvent(&event)) { 
+  while (SDL_PollEvent(&event)) { 
     if(event.type == SDL_QUIT) { 
       // close files, etc...
 
@@ -189,7 +189,7 @@ int main( int argc, const char* argv[] ) {
     // printf("\nt: %f", t);
   }
 
-  while(1) {
+  while (1) {
     quitevent();
   }
 }

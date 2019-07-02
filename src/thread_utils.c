@@ -22,9 +22,9 @@ void release(pararg *parg, char id)
 	pthread_cond_signal(parg->cond);
 }
 
-void wait_for_response(pararg *parg, unsigned char dst, unsigned char src)
+void wait_for_response(pararg *parg, unsigned char src, unsigned char dst)
 {
-	grant_ownership(parg, dst);
+	grant_ownership(parg, src, dst);
 	request_ownership(parg, src);
 }
 
@@ -43,14 +43,15 @@ void request_ownership(pararg *parg, unsigned char id)
 	parg->holder = id;
 }
 
-void grant_ownership(pararg *parg, unsigned char mask)
+void grant_ownership(pararg *parg, unsigned char src, unsigned char dst_mask)
 {
-	parg->holder = mask;
+	parg->holder = dst_mask;
+	parg->granter = src;
 	pthread_cond_broadcast(parg->cond);
 	pthread_mutex_unlock(parg->mutex);
 }
 
-void release_ownership(pararg *parg)
+void release_ownership(pararg *parg, unsigned char src)
 {
-	grant_ownership(parg, FREE);
+	grant_ownership(parg, ANY, src);
 }

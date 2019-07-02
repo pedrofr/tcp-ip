@@ -13,7 +13,7 @@
 
 #define CONTROLLER_PERIOD \
 	{                     \
-		0, 20000000L      \
+		0, 50000000L      \
 	}
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -47,7 +47,7 @@ void *controller()
 	time_last = time_current = time_start;
 	perspec pspec = {time_start, CONTROLLER_PERIOD};
 
-	while(loading_graphics());
+	while (loading_graphics());
 	load = 0;
 
 	while (!quit)
