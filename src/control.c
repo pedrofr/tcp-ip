@@ -34,20 +34,21 @@ void *control(void *args)
 		errorf("\nThread creation failed: %d\n", errnum);
 	}
 
+	request_ownership(parg, CONTROL);
 	while (!matches_arg(pcomm->command, pcomm->argument, "Start", OK))
 	{
 		strcpy(pcomm->command, "Start");
 		strcpy(pcomm->argument, "");
 
-		wait_response(parg, CONTROL);
+		wait_for_response(parg, CLIENT, CONTROL);
 	}
 
-	while (1)
+	while (!matches_arg(pcomm->command, pcomm->argument, "Exit", OK))
 	{
 		strcpy(pcomm->command, "GetLevel");
 		strcpy(pcomm->argument, "");
 
-		wait_response(parg, CONTROL);
+		wait_for_response(parg, CLIENT, CONTROL);
 
 		if (matches_numeric(pcomm->command, pcomm->argument, "Level"))
 		{
@@ -55,7 +56,6 @@ void *control(void *args)
 		}
 		else if (matches_arg(pcomm->command, pcomm->argument, "Exit", OK))
 		{
-			release(parg, CONTROL);
 			break;
 		}
 
@@ -74,7 +74,7 @@ void *control(void *args)
 			sprintf(pcomm->argument, "%i", -angle_diff);
 		}
 
-		wait_response(parg, CONTROL);
+		wait_for_response(parg, CLIENT, CONTROL);
 
 		if (matches_numeric(pcomm->command, pcomm->argument, "Open"))
 		{
@@ -86,20 +86,26 @@ void *control(void *args)
 		}
 		else if (matches_arg(pcomm->command, pcomm->argument, "Exit", OK))
 		{
-			release(parg, CONTROL);
 			break;
 		}
 
 		update_controller(&cpar);
+		
+		grant_ownership(parg, CONTROL | TERMINAL);
 
 		nanosleep(&sleepTime, NULL);
+
+		request_ownership(parg, CONTROL);
 	}
 
 	quit_controller();
-	quit_keyboard_handler();
-
 	pthread_join(controller_thread, NULL);
+
+	quit_keyboard_handler();
+	grant_ownership(parg, TERMINAL);
 	pthread_join(keyboard_thread, NULL);
+
+	grant_ownership(parg, CLIENT);
 
 	timestamp_printf("Closing control!\n");
 

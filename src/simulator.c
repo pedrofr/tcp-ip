@@ -71,6 +71,7 @@ void *simulate(void *args)
 					errorf("\nThread creation failed: %d\n", errnum);
 				}
 
+				while (loading_plant());
 				plant_running = 1;
 			}
 

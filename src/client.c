@@ -40,7 +40,6 @@ int main(int argc, char *argv[])
   unsigned int echolen, clientlen;
   int received = 0;
   struct timespec timeout = TIMEOUT;
-  char *commtest = "CommTest!";
 
   if (argc < 3)
   {
@@ -85,7 +84,7 @@ int main(int argc, char *argv[])
 
   while (1)
   {
-    sendto(sock, commtest, strlen(commtest), 0,
+    sendto(sock, "CommTest!", strlen("CommTest!"), 0,
            (struct sockaddr *)&echoserver,
            sizeof(echoserver));
 
@@ -117,11 +116,11 @@ int main(int argc, char *argv[])
 
   timestamp_printf("Server found!\n");
 
-  parscomm pcomm;
+  parscomm pcomm = {"", ""};
   pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
   pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 
-  pararg parg = {&pcomm, CONTROL, &mutex, &cond};
+  pararg parg = {&pcomm, FREE, &mutex, &cond};
 
   int errnum;
 
@@ -132,24 +131,22 @@ int main(int argc, char *argv[])
     errorf("\nThread creation failed: %d\n", errnum);
   }
 
-  do
+  while (!matches_arg(pcomm.command, pcomm.argument, "Exit", "OK"))
   {
-    wait_request(&parg, CLIENT);
+    request_ownership(&parg, CLIENT);
 
     if (is_empty(pcomm.command))
     {
-      release(&parg, CLIENT);
+      grant_ownership(&parg, CONTROL);
       continue;
     }
     if (is_empty(pcomm.argument))
     {
       sprintf(buffer, "%s!", pcomm.command);
-      // printf("%s!", pcomm.command);
     }
     else
     {
       sprintf(buffer, "%s#%s!", pcomm.command, pcomm.argument);
-      // printf("%s#%s!", pcomm.command, pcomm.argument);
     }
 
     // if (s > 1000)
@@ -196,9 +193,8 @@ int main(int argc, char *argv[])
     // timestamp_printf("command: '%s'\n", pcomm.command);
     // timestamp_printf("argument: '%s'\n", pcomm.argument);
 
-    release(&parg, CLIENT);
-
-  } while (!matches_arg(pcomm.command, pcomm.argument, "Exit", "OK"));
+    grant_ownership(&parg, CONTROL);
+  }
 
   close(sock);
   pthread_join(control_thread, NULL);

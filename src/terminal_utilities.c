@@ -104,19 +104,20 @@ void *keyboard_handler(void *args)
       printf("\n\r\033[K");
       timestamp_force_printf("Enter manual command: ");
 
+      // while ((c = getchar()) != '\n' && c != EOF);
       scanf("%s", buffer);
       // fgets(buffer, BUFFER_SIZE, stdin);
       while ((c = getchar()) != '\n' && c != EOF);
 
       timestamp_force_printf("Command was: %s\n", buffer);
 
-      printf("\nPress [crtl]+[m] or [enter] to enter manual command.\n\r\033[2A");
+      request_ownership(parg, TERMINAL);
+      if(!quit)
+        parse(pcomm, buffer, MIN_VALUE, MAX_VALUE, OK);
+		  grant_ownership(parg, CLIENT);
 
       restore_timed_output();
-
-      release(parg, TERMINAL);
-      parse(pcomm, buffer, MIN_VALUE, MAX_VALUE, OK);
-		  wait_response(parg, TERMINAL);
+      printf("\nPress [crtl]+[m] or [enter] to enter manual command.\n\r\033[2A");
     }
   }
   
@@ -126,6 +127,11 @@ void *keyboard_handler(void *args)
 }
 
 void quit_keyboard_handler()
+{
+  quit = 1;
+}
+
+void running_keyboard_handler()
 {
   quit = 1;
 }
