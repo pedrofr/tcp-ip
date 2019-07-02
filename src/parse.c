@@ -6,7 +6,7 @@
 
 #include <stdio.h> //to be removed
 
-int isNumeric(const char *s)
+char isNumeric(const char *s)
 {
     if (s == NULL || is_empty(s) || isspace(*s))
         return 0;
@@ -15,42 +15,38 @@ int isNumeric(const char *s)
     return is_empty(p);
 }
 
-int checkRange(double value, double min_range, double max_range)
+char checkRange(double value, double min_range, double max_range)
 {
     if (min_range > max_range)
         errorf("checkRange limits");
 
-    int lower = min_range <= value;
-    int higher = value <= max_range;
-
-    return lower & higher;
+    return (min_range <= value) & (value <= max_range);
 }
 
-int matches_arg(const char *command, const char *argument, const char *desired_command, const char *desired_argument)
+char matches_arg(const char *command, const char *argument, const char *desired_command, const char *desired_argument)
 {
     return strcmp(command, desired_command) == 0 && strcmp(argument, desired_argument) == 0;
 }
 
-int matches_no_arg(const char *command, const char *argument, const char *desired_command)
+char matches_no_arg(const char *command, const char *argument, const char *desired_command)
 {
     return strcmp(command, desired_command) == 0 && is_empty(argument);
 }
 
-int matches_numeric(const char *command, const char *argument, const char *desired_command)
+char matches_numeric(const char *command, const char *argument, const char *desired_command)
 {
     return strcmp(command, desired_command) == 0 && isNumeric(argument);
 }
 
-parscomm parse(const char *rawCommand, double min_range, double max_range, const char *exception)
+void parse(parscomm *pcomm, const char *rawCommand, double min_range, double max_range, const char *exception)
 {
     char *command;
     char *argument;
     char *string, *tofree;
-    parscomm pcomm;
 
     //default means error
-    strcpy(pcomm.command, "");
-    strcpy(pcomm.argument, "");
+    strcpy(pcomm->command, "");
+    strcpy(pcomm->argument, "");
 
     if (min_range > max_range)
         errorf("parse limits");
@@ -65,7 +61,7 @@ parscomm parse(const char *rawCommand, double min_range, double max_range, const
         //error
         free(tofree);
 
-        return pcomm;
+        return;
     }
 
     command = strsep(&string, "#!");
@@ -75,7 +71,7 @@ parscomm parse(const char *rawCommand, double min_range, double max_range, const
         //error
         free(tofree);
 
-        return pcomm;
+        return;
     }
 
     int diff = string - command;
@@ -85,7 +81,7 @@ parscomm parse(const char *rawCommand, double min_range, double max_range, const
     if (!length && rawCommand[diff - 1] == '!')
     {
         //only command
-        strcpy(pcomm.command, command);
+        strcpy(pcomm->command, command);
     }
     else if (length && rawCommand[diff - 1] == '#')
     {
@@ -104,15 +100,15 @@ parscomm parse(const char *rawCommand, double min_range, double max_range, const
             if (checkRange(argument_d, min_range, max_range))
             {
                 //command and numeric argument
-                strcpy(pcomm.command, command);
-                strcpy(pcomm.argument, argument);
+                strcpy(pcomm->command, command);
+                strcpy(pcomm->argument, argument);
             }
         }
         else if (strcmp(argument, exception) == 0)
         {
             //command and exception argument
-            strcpy(pcomm.command, command);
-            strcpy(pcomm.argument, argument);
+            strcpy(pcomm->command, command);
+            strcpy(pcomm->argument, argument);
         }
         else
         {
@@ -126,5 +122,5 @@ parscomm parse(const char *rawCommand, double min_range, double max_range, const
 
     free(tofree);
 
-    return pcomm;
+    return;
 }

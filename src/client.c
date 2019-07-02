@@ -28,23 +28,19 @@
 
 int main(int argc, char *argv[])
 {
+  // int s = 0;
+
   timestamp_printf("Starting client!\n");
 
   int sock, ready;
   struct sockaddr_in echoserver;
   struct sockaddr_in echoclient;
+  struct hostent *server;
   char buffer[BUFFER_SIZE];
   unsigned int echolen, clientlen;
   int received = 0;
   struct timespec timeout = TIMEOUT;
   char *commtest = "CommTest!";
-
-  // int sockfd, portno, n;
-  // struct sockaddr_in serv_addr;
-  struct hostent *server;
-
-  // char buffer_in[BUFFER_SIZE];
-  // char buffer_out[BUFFER_SIZE];
 
   if (argc < 3)
   {
@@ -69,16 +65,6 @@ int main(int argc, char *argv[])
     fprintf(stderr, "ERROR, no such host\n");
     exit(0);
   }
-
-  // bzero((char *)&serv_addr, sizeof(serv_addr));
-  // serv_addr.sin_family = AF_INET;
-  // bcopy((char *)server->h_addr,
-  //       (char *)&serv_addr.sin_addr.s_addr,
-  //       server->h_length);
-  // serv_addr.sin_port = htons(portno);
-
-  // if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
-  //   errorf("ERROR connecting");
 
   bzero((char *)&echoserver, sizeof(echoserver));
   echoserver.sin_family = AF_INET;
@@ -126,7 +112,6 @@ int main(int argc, char *argv[])
       {
         errorf("Received an unrecognized message from server (%s)", buffer);
       }
-      
     }
   }
 
@@ -138,9 +123,10 @@ int main(int argc, char *argv[])
 
   pararg parg = {&pcomm, CONTROL, &mutex, &cond};
 
+  int errnum;
+
   pthread_t control_thread;
 
-  int errnum;
   if ((errnum = pthread_create(&control_thread, NULL, control, &parg)))
   {
     errorf("\nThread creation failed: %d\n", errnum);
@@ -150,34 +136,6 @@ int main(int argc, char *argv[])
   {
     wait_request(&parg, CLIENT);
 
-    // TCP
-    // printf("\nPlease enter the message: ");
-    // bzero(buffer_out, BUFFER_SIZE);
-    // fgets(buffer_out, BUFFER_SIZE, stdin);
-
-    // char *pos = strchr(buffer_out, '\n');
-    // *pos = '\0';
-
-    // bzero(buffer_out, BUFFER_SIZE);
-    // if (is_empty(pcomm.argument))
-    // {
-    //   sprintf(buffer_out, "%s!", pcomm.command);
-    // }
-    // else
-    // {
-    //   sprintf(buffer_out, "%s#%s!", pcomm.command, pcomm.argument);
-    // }
-
-    // n = write(sockfd, buffer_out, strlen(buffer_out));
-    // if (n < 0)
-    //   errorf("ERROR writing to socket");
-
-    // bzero(buffer_in, BUFFER_SIZE);
-    // n = read(sockfd, buffer_in, BUFFER_SIZE);
-    // if (n < 0)
-    //   errorf("ERROR reading from socket");
-
-    // UDP
     if (is_empty(pcomm.command))
     {
       release(&parg, CLIENT);
@@ -193,6 +151,14 @@ int main(int argc, char *argv[])
       sprintf(buffer, "%s#%s!", pcomm.command, pcomm.argument);
       // printf("%s#%s!", pcomm.command, pcomm.argument);
     }
+
+    // if (s > 1000)
+    // {
+    //   strcpy(pcomm.command, "Exit");
+    //   strcpy(pcomm.argument, "");
+    //   sprintf(buffer, "%s!", pcomm.command);
+    // }
+    // s++;
 
     /* Send the word to the server */
     echolen = strlen(buffer);
@@ -225,22 +191,16 @@ int main(int argc, char *argv[])
 
     // timestamp_printf("\nResponse: '%s'\n", buffer_in);
 
-    // pcomm = parse(buffer_in, MIN_VALUE, MAX_VALUE, OK);
-    pcomm = parse(buffer, MIN_VALUE, MAX_VALUE, OK);
+    parse(&pcomm, buffer, MIN_VALUE, MAX_VALUE, OK);
 
     // timestamp_printf("command: '%s'\n", pcomm.command);
     // timestamp_printf("argument: '%s'\n", pcomm.argument);
 
     release(&parg, CLIENT);
 
-    // printf("\n");
-    // timestamp_printf("Manual command: \033[1A");
-
   } while (!matches_arg(pcomm.command, pcomm.argument, "Exit", "OK"));
 
-  // close(sockfd);
   close(sock);
-
   pthread_join(control_thread, NULL);
 
   timestamp_printf("Closing client!\n");

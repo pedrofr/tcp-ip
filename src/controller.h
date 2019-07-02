@@ -6,6 +6,6 @@ typedef struct controller_parameters
 } contpar;
 
 void *controller();
-void update_controller(contpar cpar);
+void update_controller(contpar *cpar);
 void quit_controller();
-void read_controller(contpar *cpar);
+char loading_controller();

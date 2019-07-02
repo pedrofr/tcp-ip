@@ -15,11 +15,12 @@
 #define PLANT_PERIOD {0, 10000000L}
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-static volatile int _quit;
 static volatile double _delta;
 static volatile int _max = 100;
 static volatile int _level;
-static volatile int _restart;
+
+static volatile char load;
+static volatile char quit;
 
 static double out_angle_function(double time);
 
@@ -29,7 +30,6 @@ void *plant()
 
 	double in_angle = 50;
 	double level = 0.4;
-	int quit = 0;
 
 	struct timespec time_start, time_last, time_current;
 
@@ -48,13 +48,11 @@ void *plant()
 	while (!quit)
 	{
 		pthread_mutex_lock(&mutex);
-		quit = _quit;
 		double delta_i = _delta;
 		double max = _max;
-		int restart = _restart;
 		pthread_mutex_unlock(&mutex);
 
-		if(restart)
+		if(load)
 		{
 			pthread_mutex_lock(&mutex);
 
@@ -64,17 +62,17 @@ void *plant()
 			in_angle = 50;
 			level = 0.4;
 			delta_i = _delta = 0;
-			restart = _restart = 0;
 			_level = level;
 
 			now(&time_start);
 			time_last = time_current = time_start;
 			pspec.time_next = time_start;
 
-			while(restarting_graphics());
+			while(loading_graphics());
 			timestamp_printf("Done restarting plant!\n");
 
 			pthread_mutex_unlock(&mutex);
+			load = 0;
 		}
 
 		now(&time_current);
@@ -157,25 +155,17 @@ void update_delta(int delta)
 
 void quit_plant()
 {
-	pthread_mutex_lock(&mutex);
-	_quit = 1;
-	pthread_mutex_unlock(&mutex);
+	quit = 1;
 }
 
 void restart_plant()
 {
-	pthread_mutex_lock(&mutex);
-	_restart = 1;
-	pthread_mutex_unlock(&mutex);
+	load = 1;
 }
 
-int restarting_plant()
+char loading_plant()
 {
-	pthread_mutex_lock(&mutex);
-	int restart = _restart;
-	pthread_mutex_unlock(&mutex);
-
-	return restart;
+	return load;
 }
 
 void read_level(int *level)

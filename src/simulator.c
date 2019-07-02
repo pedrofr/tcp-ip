@@ -16,8 +16,7 @@ void *simulate(void *args)
 	pararg *parg = (pararg *)args;
 	parscomm *pcomm = parg->pcomm;
 
-	int plant_running = 0;
-	int quit = 0;
+	char plant_running = 0, quit = 0;
 
 	pthread_t plant_thread;
 
@@ -57,17 +56,12 @@ void *simulate(void *args)
 			strcpy(pcomm->command, "Level");
 			sprintf(pcomm->argument, "%i", level);
 		}
-		else if (matches_no_arg(pcomm->command, pcomm->argument, "CommTest"))
-		{
-			strcpy(pcomm->command, "Comm");
-			strcpy(pcomm->argument, OK);
-		}
 		else if (matches_no_arg(pcomm->command, pcomm->argument, "Start"))
 		{
 			if (plant_running)
 			{
 				restart_plant();
-				while (restarting_plant());				
+				while (loading_plant());				
 			}
 			else
 			{
@@ -90,11 +84,6 @@ void *simulate(void *args)
 
 			quit = 1;
 		}
-		// else
-		// {
-		// 	strcpy(pcomm->command, "NoMessageFound");
-		// 	strcpy(pcomm->argument, "");
-		// }
 
 		release(parg, SIMULATOR);
 

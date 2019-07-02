@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <pthread.h>
 #include "time_utils.h"
 
 /* Operations on timespecs. -- TAKEN FROM https://github.com/openbsd/src/blob/master/sys/sys/time.h */
@@ -9,10 +10,10 @@
 #define timespecisset(tsp) ((tsp)->tv_sec || (tsp)->tv_nsec)
 #define timespecisvalid(tsp) \
     ((tsp)->tv_nsec >= 0 && (tsp)->tv_nsec < 1000000000L)
-#define timespeccmp(tsp, usp, cmp)                        \
-    (((tsp)->tv_sec == (usp)->tv_sec)                     \
-         ? ((tsp)->tv_nsec cmp (usp)->tv_nsec)            \
-         : ((tsp)->tv_sec cmp (usp)->tv_sec))
+#define timespeccmp(tsp, usp, cmp)            \
+    (((tsp)->tv_sec == (usp)->tv_sec)         \
+         ? ((tsp)->tv_nsec cmp(usp)->tv_nsec) \
+         : ((tsp)->tv_sec cmp(usp)->tv_sec))
 #define timespecadd(tsp, usp, vsp)                        \
     do                                                    \
     {                                                     \
@@ -40,7 +41,34 @@
 
 size_t get_timestamp(char *timestamp);
 
+static volatile char write_allowed = 1;
+
 int timestamp_printf(const char *format, ...)
+{
+    if (write_allowed)
+    {
+        char timestamp[TIMESTAMP_SIZE];
+        get_timestamp(timestamp);
+
+        va_list argptr;
+        char *message;
+
+        va_start(argptr, format);
+        vasprintf(&message, format, argptr);
+
+        int ret = printf("\033[K\r[%s] %s", timestamp, message);
+
+        fflush(stdout);
+
+        free(message);
+        va_end(argptr);
+        return ret - TIMESTAMP_SIZE;
+    }
+    
+    return 0;
+}
+
+int timestamp_force_printf(const char *format, ...)
 {
     char timestamp[TIMESTAMP_SIZE];
     get_timestamp(timestamp);
@@ -51,13 +79,13 @@ int timestamp_printf(const char *format, ...)
     va_start(argptr, format);
     vasprintf(&message, format, argptr);
 
-    int ret = printf("\33[2K\r[%s] %s", timestamp, message);
+    int ret = printf("\033[K\r[%s] %s", timestamp, message);
 
     fflush(stdout);
 
     free(message);
     va_end(argptr);
-    return ret;
+    return ret - TIMESTAMP_SIZE;
 }
 
 size_t get_timestamp(char *timestamp)
@@ -81,7 +109,7 @@ int ensure_period(perspec *pspec)
     {
         return error;
     }
-    
+
     timespecsub(&pspec->time_next, &time_now, &sleep_time);
 
     while (nanosleep(&sleep_time, &sleep_time) && timespeccmp(&pspec->time_next, &time_now, >))
@@ -98,4 +126,14 @@ int ensure_period(perspec *pspec)
 double timediff(const struct timespec *x, const struct timespec *y)
 {
     return (x->tv_sec - y->tv_sec) * 1000. + (x->tv_nsec - y->tv_nsec) / 1000000.;
+}
+
+void suspend_timed_output()
+{
+	write_allowed = 0;
+}
+
+void restore_timed_output()
+{
+	write_allowed = 1;
 }

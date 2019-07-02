@@ -3,7 +3,9 @@
 #define MAX_VALUE 100.
 #define MIN_VALUE 0.
 #define OK "OK"
-#define SERVER 0
-#define SIMULATOR 1
-#define CLIENT 2
-#define CONTROL 3
+#define FREE        0b00000000
+#define SERVER      0b11111110
+#define SIMULATOR   0b11111101
+#define CLIENT      0b11111011
+#define CONTROL     0b11110111
+#define TERMINAL    0b11101111

@@ -7,6 +7,7 @@
 #include "controller.h"
 #include "comm_consts.h"
 #include "time_utils.h"
+#include "terminal_utilities.h"
 
 void *control(void *args)
 {
@@ -21,6 +22,14 @@ void *control(void *args)
 
 	int errnum;
 	if ((errnum = pthread_create(&controller_thread, NULL, controller, NULL)))
+	{
+		errorf("\nThread creation failed: %d\n", errnum);
+	}
+
+	while(loading_controller());
+
+	pthread_t keyboard_thread;
+	if ((errnum = pthread_create(&keyboard_thread, NULL, keyboard_handler, parg)))
 	{
 		errorf("\nThread creation failed: %d\n", errnum);
 	}
@@ -50,8 +59,7 @@ void *control(void *args)
 			break;
 		}
 
-		update_controller(cpar);
-		read_controller(&cpar);
+		update_controller(&cpar);
 		
 		int angle_diff = cpar.requested_angle - cpar.reported_angle;
 
@@ -82,13 +90,16 @@ void *control(void *args)
 			break;
 		}
 
-		update_controller(cpar);
+		update_controller(&cpar);
 
 		nanosleep(&sleepTime, NULL);
 	}
 
 	quit_controller();
+	quit_keyboard_handler();
+
 	pthread_join(controller_thread, NULL);
+	pthread_join(keyboard_thread, NULL);
 
 	timestamp_printf("Closing control!\n");
 

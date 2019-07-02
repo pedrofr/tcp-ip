@@ -8,9 +8,9 @@ typedef struct parsed_command
   char argument[HALF_BUFFER_SIZE];
 } parscomm;
 
-int isNumeric(const char *s);
-int checkRange(double value, double min_range, double max_range);
-int matches_arg(const char *command, const char *argument, const char *desired_command, const char *desired_argument);
-int matches_no_arg(const char *command, const char *argument, const char *desired_command);
-int matches_numeric(const char *command, const char *argument, const char *desired_command);
-parscomm parse(const char *rawCommand, double min_range, double max_range, const char *exception);
+char isNumeric(const char *s);
+char checkRange(double value, double min_range, double max_range);
+char matches_arg(const char *command, const char *argument, const char *desired_command, const char *desired_argument);
+char matches_no_arg(const char *command, const char *argument, const char *desired_command);
+char matches_numeric(const char *command, const char *argument, const char *desired_command);
+void parse(parscomm *pcomm, const char *rawCommand, double min_range, double max_range, const char *exception);

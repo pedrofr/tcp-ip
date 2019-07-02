@@ -1,9 +1,9 @@
 #include "control_utils.h"
 #include <stddef.h>
 
-double saturate(double value, double min, double max, int *saturated)
+double saturate(double value, double min, double max, char *saturated)
 {
-    int _saturated = value > max || value < min;
+    char _saturated = value > max || value < min;
 
     if (saturated != NULL) {
         *saturated = _saturated;
@@ -16,9 +16,9 @@ double saturate(double value, double min, double max, int *saturated)
             : value;
 }
 
-double dead_zone(double value, double lower_limit, double upper_limit, int *in_dead_zone)
+double dead_zone(double value, double lower_limit, double upper_limit, char *in_dead_zone)
 {
-    int _in_dead_zone = value > lower_limit && value < upper_limit;
+    char _in_dead_zone = value > lower_limit && value < upper_limit;
 
     if (in_dead_zone != NULL)
     {

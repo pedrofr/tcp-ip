@@ -176,75 +176,81 @@ static void quitevent()
   }
 }
 
-#define GRAPHICS_PERIOD {0, 50000000L}
-#define EPOCH_DURATION 60
+#define GRAPHICS_PERIOD \
+  {                     \
+    0, 50000000L        \
+  }
 #define EPOCH_DURATION 60
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-static volatile int _quit;
+
 static volatile double _time;
 static volatile double _var1;
 static volatile double _var2;
 static volatile double _var3;
-static volatile int _restart;
+
+static volatile char load = 1;
+static volatile char quit;
 
 void *graphics()
 {
   timestamp_printf("Starting graphics!\n");
 
-  int quit = 0, epoch = 0, last_epoch = 0;
+  int epoch = 0, last_epoch = 0;
+
   SDL_Rect future = {PADDING_W, 0, SCREEN_W, SCREEN_H};
   SDL_Rect past = {SCREEN_W, 0, PADDING_W, SCREEN_H};
   Tdataholder *data = datainit(SCREEN_W, SCREEN_H, EPOCH_DURATION, 110, 0, 0, 0);
   SDL_Surface *clean = SDL_CreateRGBSurface(SDL_SWSURFACE | SDL_SRCALPHA,
-    data->canvas->Width + data->canvas->Xext,
-    data->canvas->Height + data->canvas->Yext,
-    32,
-    0xFF000000,
-    0x00FF0000,
-    0x0000FF00,
-    0x000000FF);
-  
-  SDL_BlitSurface(data->canvas->canvas, NULL, clean, NULL);
-  
-	struct timespec time_start;
+                                            data->canvas->Width + data->canvas->Xext,
+                                            data->canvas->Height + data->canvas->Yext,
+                                            32,
+                                            0xFF000000,
+                                            0x00FF0000,
+                                            0x0000FF00,
+                                            0x000000FF);
 
-	now(&time_start);
-	perspec pspec = {time_start, GRAPHICS_PERIOD};
+  SDL_BlitSurface(data->canvas->canvas, NULL, clean, NULL);
+
+  struct timespec time_start;
+
+  now(&time_start);
+  perspec pspec = {time_start, GRAPHICS_PERIOD};
+
+  load = 0;
 
   while (!quit)
   {
     pthread_mutex_lock(&mutex);
-    quit = _quit;
     double time = _time;
     double var1 = _var1; //level
     double var2 = _var2; //inangle
     double var3 = _var3; //outangle
-    int restart = _restart;
     pthread_mutex_unlock(&mutex);
 
-    if (restart)
+    if (load)
     {
-        pthread_mutex_lock(&mutex);
-			  timestamp_printf("Restarting graphics!\n");
+      pthread_mutex_lock(&mutex);
+      timestamp_printf("Restarting graphics!\n");
 
-        quit = epoch = last_epoch = 0;
-        time = _time = 0;
-        var1 = _var1 = 0; //level
-        var2 = _var2 = 0; //inangle
-        var3 = _var3 = 0; //outangle
-        restart = _restart = 0;
+      epoch = last_epoch = 0;
+      time = _time = 0;
+      var1 = _var1 = 0; //level
+      var2 = _var2 = 0; //inangle
+      var3 = _var3 = 0; //outangle
 
-        now(&time_start);
-        pspec.time_next = time_start;
-      
-        SDL_BlitSurface(clean, NULL, data->canvas->canvas, NULL);
+      now(&time_start);
+      pspec.time_next = time_start;
 
-			  timestamp_printf("Done restarting graphics!\n");
-        pthread_mutex_unlock(&mutex);
+      SDL_BlitSurface(clean, NULL, data->canvas->canvas, NULL);
+
+      timestamp_printf("Done restarting graphics!\n");
+
+      pthread_mutex_unlock(&mutex);
+      load = 0;
     }
 
-    if (last_epoch != (epoch = time/EPOCH_DURATION))
+    if (last_epoch != (epoch = time / EPOCH_DURATION))
     {
       last_epoch = epoch;
 
@@ -256,9 +262,9 @@ void *graphics()
 
     datadraw(data, fmod(time, EPOCH_DURATION), var1, var2, var3);
 
-		ensure_period(&pspec);
+    ensure_period(&pspec);
   }
-  
+
   // SDL_Quit();
 
   timestamp_printf("Closing graphics!\n");
@@ -278,23 +284,15 @@ void update_graphics(double time, double var1, double var2, double var3)
 
 void quit_graphics()
 {
-  pthread_mutex_lock(&mutex);
-  _quit = 1;
-  pthread_mutex_unlock(&mutex);
+  quit = 1;
 }
 
 void restart_graphics()
 {
-	pthread_mutex_lock(&mutex);
-	_restart = 1;
-	pthread_mutex_unlock(&mutex);
+  load = 1;
 }
 
-int restarting_graphics()
+char loading_graphics()
 {
-	pthread_mutex_lock(&mutex);
-	int restart = _restart;
-	pthread_mutex_unlock(&mutex);
-
-  return restart;
+  return load;
 }

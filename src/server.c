@@ -48,34 +48,6 @@ int main(int argc, char *argv[])
   if (bind(sock, (struct sockaddr *)&echoserver, serverlen) < 0)
     errorf("Failed to bind server socket");
 
-  // int sockfd, newsockfd, portno;
-  // socklen_t clilen;
-  // char buffer_in[BUFFER_SIZE];
-  // char buffer_out[BUFFER_SIZE];
-  // struct sockaddr_in serv_addr, cli_addr;
-  // int n;
-
-  // sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  // if (sockfd < 0)
-  //   errorf("ERROR opening socket");
-
-  // bzero((char *)&serv_addr, sizeof(serv_addr));
-  // portno = atoi(argv[1]);
-  // serv_addr.sin_family = AF_INET;
-  // serv_addr.sin_addr.s_addr = INADDR_ANY;
-  // serv_addr.sin_port = htons(portno);
-
-  // if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
-  //   errorf("ERROR on binding");
-
-  // listen(sockfd, 5);
-  // clilen = sizeof(cli_addr);
-
-  // newsockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen);
-  // if (newsockfd < 0)
-  //   errorf("ERROR on accept");
-
-  /* Create independent thread which will execute simulate */
   parscomm pcomm;
   pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
   pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
@@ -92,7 +64,6 @@ int main(int argc, char *argv[])
 
   while (1)
   {
-    // UDP
     clientlen = sizeof(echoclient);
     if ((received = recvfrom(sock, buffer, BUFFER_SIZE, 0,
                              (struct sockaddr *)&echoclient,
@@ -105,10 +76,20 @@ int main(int argc, char *argv[])
     // printf("Client connected: %s\n", inet_ntoa(echoclient.sin_addr));
     // printf("Message: %s\n", buffer);
 
-    pcomm = parse(buffer, MIN_VALUE, MAX_VALUE, OK);
+    parse(&pcomm, buffer, MIN_VALUE, MAX_VALUE, OK);
 
-    wait_response(&parg, SERVER);
-
+		if (matches_no_arg(pcomm.command, pcomm.argument, "CommTest"))
+		{
+			strcpy(pcomm.command, "Comm");
+			strcpy(pcomm.argument, OK);
+      timestamp_printf("Server reached for 'CommTest' from %s!\n", inet_ntoa(echoclient.sin_addr));
+		}
+    else
+    {
+      wait_response(&parg, SERVER);
+    }
+    
+    
     sprintf(buffer, "%s#%s!", pcomm.command, pcomm.argument);
 
     int bufferlen = strlen(buffer);
@@ -124,39 +105,7 @@ int main(int argc, char *argv[])
     {
       break;
     }
-    else if (matches_arg(pcomm.command, pcomm.argument, "Comm", OK))
-    {
-      timestamp_printf("Server reached for 'CommTest' from %s\n", inet_ntoa(echoclient.sin_addr));
-    }
-    
-
-    // TCP
-    // bzero(buffer_in, BUFFER_SIZE);
-
-    // n = read(newsockfd, buffer_in, BUFFER_SIZE);
-    // if (n < 0)
-    //   errorf("ERROR reading from socket");
-
-    // // timestamp_printf("\nRequest: '%s'\n", buffer_in);
-
-    // pcomm = parse(buffer_in, MIN_VALUE, MAX_VALUE, OK);
-
-    // // timestamp_printf("command: '%s'\n", pcomm.command);
-    // // timestamp_printf("argument: '%s'\n", pcomm.argument);
-
-    // wait_response(&parg, SERVER);
-
-    // sprintf(buffer_out, "%s#%s!", pcomm.command, pcomm.argument);
-    // n = write(newsockfd, buffer_out, strlen(buffer_out));
-    // if (n < 0)
-    //   errorf("ERROR writing to socket");
-
-    // if (matches_arg(pcomm.command, pcomm.argument, "Exit", OK))
-    //   break;
   }
-
-  // close(newsockfd);
-  // close(sockfd);
 
   close(sock);
 
