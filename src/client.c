@@ -21,14 +21,12 @@
 
 #define h_addr h_addr_list[0] /* for backward compatibility */
 
-#define NOWAIT \
-  {            \
-    0, 0       \
-  }
 #define TIMEOUT  \
   {              \
     0, 50000000L \
   }
+
+int clear_queue(struct pollfd *fds, char *buffer, int bsize, struct sockaddr *addr, unsigned int *addrlen);
 
 int main(int argc, char *argv[])
 {
@@ -40,7 +38,7 @@ int main(int argc, char *argv[])
   struct hostent *server;
   unsigned int echolen, clientlen;
   int received = 0;
-  struct timespec timeout = TIMEOUT, nowait = NOWAIT;
+  struct timespec timeout = TIMEOUT;
 
   parscomm pcomm = {"", ""};
   pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -171,25 +169,19 @@ int main(int argc, char *argv[])
 
     empty(parg.buffer);
     unsigned char read = 0;
-    if ((ready = ppoll(&fds, 1, &nowait, NULL)))
-    {
-      do
-      {
-        received = recvfrom(sock, parg.buffer, BUFFER_SIZE, 0,
-                            (struct sockaddr *)&echoclient,
-                            &clientlen);
 
-        read = 1;
-      } while ((ready = ppoll(&fds, 1, &nowait, NULL)));
-    }
-    else if ((ready = ppoll(&fds, 1, &timeout, NULL)))
+    // Clean queue
+    clear_queue(&fds, parg.buffer, BUFFER_SIZE, (struct sockaddr *)&echoclient, &clientlen);
+    
+    if ((ppoll(&fds, 1, &timeout, NULL)))
     {
       received = recvfrom(sock, parg.buffer, BUFFER_SIZE, 0,
                           (struct sockaddr *)&echoclient,
                           &clientlen);
-                          
+
       read = 1;
     }
+
     if (read)
     {
       /* Check that client and server are using same socket */
@@ -229,4 +221,25 @@ int main(int argc, char *argv[])
   timestamp_printf("Closing client!\n");
 
   return 0;
+}
+
+int clear_queue(struct pollfd *fds, char *buffer, int bsize, struct sockaddr *addr, unsigned int *addrlen)
+{
+  int read = 0, received = 0;
+  struct timespec nowait = NOWAIT;
+
+  if ((ppoll(fds, 1, &nowait, NULL)))
+  {
+    do
+    {
+      received = recvfrom(fds->fd, buffer, bsize, 0, addr, addrlen);
+
+      read = 1;
+    } while ((ppoll(fds, 1, &nowait, NULL)));
+  }
+
+  if (read)
+    buffer[received] = '\0'; /* Assure null terminated string */
+
+  return read;
 }

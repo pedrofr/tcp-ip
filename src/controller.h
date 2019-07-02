@@ -1,8 +1,8 @@
 typedef struct controller_parameters
 {
-	volatile int requested_angle;
-	volatile int reported_angle;
-	volatile int level;
+	volatile double requested_angle;
+	volatile double reported_angle;
+	volatile double level;
 } contpar;
 
 void *controller();

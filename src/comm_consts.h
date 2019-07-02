@@ -9,3 +9,5 @@
 #define CLIENT      0b00000100
 #define CONTROL     0b00001000
 #define TERMINAL    0b00010000
+
+#define NOWAIT {0, 0}

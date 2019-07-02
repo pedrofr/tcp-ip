@@ -9,6 +9,8 @@
 #include "time_utils.h"
 #include "terminal_utilities.h"
 
+#include <math.h>
+
 static volatile char load = 1;
 
 void *control(void *args)
@@ -64,7 +66,7 @@ void *control(void *args)
 
 		update_controller(&cpar);
 		
-		int angle_diff = cpar.requested_angle - cpar.reported_angle;
+		int angle_diff = (int)round(cpar.requested_angle - cpar.reported_angle);
 
 		if (angle_diff > 0)
 		{	

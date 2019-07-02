@@ -30,8 +30,7 @@ void *controller()
 {
 	timestamp_printf("Starting controller!\n");
 
-	double angle;
-	double reference = 80;
+	double angle = 50, last_angle = 50, reference = 80;
 
 	struct timespec time_start, time_last, time_current;
 
@@ -54,7 +53,7 @@ void *controller()
 	{
 		pthread_mutex_lock(&mutex);
 		double level = _level;
-		double reported_angle = _reported_angle;
+		// double reported_angle = _reported_angle;
 		pthread_mutex_unlock(&mutex);
 
 		now(&time_current);
@@ -62,15 +61,17 @@ void *controller()
 		double dT = timediff(&time_current, &time_last);
 		time_last = time_current;
 
+		last_angle = angle;
 		angle = pid(dT, level, reference);
-
+		
 		timestamp_printf("T: %11.4f | dT: %7.4f", T, dT);
 
 		pthread_mutex_lock(&mutex);
-		_requested_angle = (int)round(angle);
+		_requested_angle = angle;
+		_reported_angle = last_angle;
 		pthread_mutex_unlock(&mutex);
 
-		update_graphics(T / 1000, level, reported_angle, 0);
+		update_graphics(T / 1000, level, angle, 0);
 
 		ensure_period(&pspec);
 	}
