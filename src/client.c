@@ -23,7 +23,7 @@
 
 #define TIMEOUT  \
   {              \
-    0, 50000000L \
+    0, 225000000L \
   }
 
 int clear_queue(struct pollfd *fds, char *buffer, int bsize, struct sockaddr *addr, unsigned int *addrlen);
@@ -171,7 +171,7 @@ int main(int argc, char *argv[])
     unsigned char read = 0;
 
     // Clean queue
-    clear_queue(&fds, parg.buffer, BUFFER_SIZE, (struct sockaddr *)&echoclient, &clientlen);
+    //clear_queue(&fds, parg.buffer, BUFFER_SIZE, (struct sockaddr *)&echoclient, &clientlen);
     
     if ((ppoll(&fds, 1, &timeout, NULL)))
     {
@@ -192,17 +192,17 @@ int main(int argc, char *argv[])
 
       parg.buffer[received] = '\0'; /* Assure null terminated string */
 
-      char oldcomm[HALF_BUFFER_SIZE];
-      strcpy(oldcomm, pcomm.command);
+      /* char oldcomm[HALF_BUFFER_SIZE]; */
+      /* strcpy(oldcomm, pcomm.command); */
 
       parse(&pcomm, parg.buffer, MIN_VALUE, MAX_VALUE, OK);
 
-      if (!is_empty(pcomm.command) && strstr(oldcomm, pcomm.command) == NULL)
-      {
-        timestamp_printf("oldcomm: %s | pcomm.command: %s | parg.buffer: %s\n", oldcomm, pcomm.command, parg.buffer);
-        empty(pcomm.command);
-        empty(pcomm.argument);
-      }
+      /* if (!is_empty(pcomm.command) && strstr(oldcomm, pcomm.command) == NULL) */
+      /* { */
+      /*   timestamp_printf("oldcomm: %s | pcomm.command: %s | parg.buffer: %s\n", oldcomm, pcomm.command, parg.buffer); */
+      /*   empty(pcomm.command); */
+      /*   empty(pcomm.argument); */
+      /* } */
     }
     else
     {

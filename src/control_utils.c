@@ -3,7 +3,11 @@
 
 double saturate(double value, double min, double max, char *saturated)
 {
-    char _saturated = value > max || value < min;
+    char _saturated = value > max
+      ? -1
+      : value < min
+         ? 1
+         : 0;
 
     if (saturated != NULL) {
         *saturated = _saturated;

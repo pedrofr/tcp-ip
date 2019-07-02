@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
 
   while (strcmp(pcomm.command, "Exit"))
   {
-    clear_queue(&fds, parg.buffer, BUFFER_SIZE, (struct sockaddr *)&echoclient, &clientlen);
+    //clear_queue(&fds, parg.buffer, BUFFER_SIZE, (struct sockaddr *)&echoclient, &clientlen);
 
     clientlen = sizeof(echoclient);
     if ((received = recvfrom(sock, parg.buffer, BUFFER_SIZE, 0,

@@ -67,6 +67,7 @@ void *control(void *args)
 		update_controller(&cpar);
 		
 		int angle_diff = (int)round(cpar.requested_angle - cpar.reported_angle);
+		cpar.reported_angle += angle_diff;
 
 		if (angle_diff > 0)
 		{	
@@ -81,15 +82,16 @@ void *control(void *args)
 
 		wait_for_response(parg, CONTROL, CLIENT);
 
-		if (matches_numeric(pcomm->command, pcomm->argument, "Open"))
-		{
-			cpar.reported_angle += atof(pcomm->argument);
-		}
-		else if (matches_numeric(pcomm->command, pcomm->argument, "Close"))
-		{
-			cpar.reported_angle -= atof(pcomm->argument);
-		}
-		else if (!strcmp(pcomm->command, "Exit"))
+		/* if (matches_numeric(pcomm->command, pcomm->argument, "Open")) */
+		/* { */
+		/* 	cpar.reported_angle += atof(pcomm->argument); */
+		/* } */
+		/* else if (matches_numeric(pcomm->command, pcomm->argument, "Close")) */
+		/* { */
+		/* 	cpar.reported_angle -= atof(pcomm->argument); */
+		/* } */
+		/* else  */
+		if (!strcmp(pcomm->command, "Exit"))
 		{
 			break;
 		}
@@ -98,7 +100,7 @@ void *control(void *args)
 		
 		grant_ownership(parg, CONTROL, CONTROL | TERMINAL);
 
-		nanosleep(&sleepTime, NULL);
+		//nanosleep(&sleepTime, NULL);
 
 		request_ownership(parg, CONTROL);
 	}

@@ -13,7 +13,7 @@
 
 #define CONTROLLER_PERIOD \
 	{                     \
-		0, 50000000L      \
+		0, 100000000L      \
 	}
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -30,7 +30,7 @@ void *controller()
 {
 	timestamp_printf("Starting controller!\n");
 
-	double angle = 50, last_angle = 50, reference = 80;
+	double angle = 50, last_angle = 50, reference = 60;
 
 	struct timespec time_start, time_last, time_current;
 
@@ -61,14 +61,14 @@ void *controller()
 		double dT = timediff(&time_current, &time_last);
 		time_last = time_current;
 
-		last_angle = angle;
+		//		last_angle = angle;
 		angle = pid(dT, level, reference);
 		
-		timestamp_printf("T: %11.4f | dT: %7.4f", T, dT);
+		//timestamp_printf("T: %11.4f | dT: %7.4f", T, dT);
 
 		pthread_mutex_lock(&mutex);
 		_requested_angle = angle;
-		_reported_angle = last_angle;
+		//		_reported_angle = last_angle;
 		pthread_mutex_unlock(&mutex);
 
 		update_graphics(T / 1000, level, angle, 0);
@@ -89,34 +89,29 @@ double pid(double dT, double level, double reference)
 	static double Max_Valve = 100;
 	static double Min_Valve = 0;
 	static double error_acceptable = 0.01;
-	static volatile double Kp = 22.94;
-	static volatile double Kd = 2956.510641;
-	static volatile double Ki = 0.00005;
+	static volatile double Kp = 22.94/10;
+	static volatile double Kd = 0;
+	//static volatile double Kd = 2956.510641/100;
+	static volatile double Ki = 0.001;
+	//	static volatile double Ki = 0.05;
 	static double pre_error = 0;
 	static double integral = 0;
+	static char saturation = 0;
 	double error;
 	double derivative;
 	double output;
 	//Beginning of the PID calculations
 	error = reference - level;
 	//If the error is too small then don't integrate
-	if (abs(error) > error_acceptable)
-		integral = integral + error * dT;
+	if (abs(error) > error_acceptable && (double)saturation*error >= 0)
+		integral += error * dT;
 	derivative = (error - pre_error) / dT;
 	output = Kp * error + Ki * integral + Kd * derivative;
 	//Update error
 	pre_error = error;
 
 	//Saturation of the output
-	if (output > Max_Valve)
-	{
-		output = Max_Valve;
-	}
-	if (output < Min_Valve)
-	{
-		output = Min_Valve;
-	}
-	return output;
+	return saturate(output, Min_Valve, Max_Valve, &saturation);
 }
 
 void update_controller(contpar *cpar)
