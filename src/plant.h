@@ -4,4 +4,4 @@ void update_delta(int delta);
 void quit_plant();
 void read_level(int *level);
 void restart_plant();
-char loading_plant();
+unsigned char loading_plant();

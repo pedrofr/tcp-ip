@@ -7,11 +7,12 @@
 #include "controller.h"
 #include "comm_consts.h"
 #include "time_utils.h"
+#include "control_utils.h"
 #include "terminal_utilities.h"
 
 #include <math.h>
 
-static volatile char load = 1;
+static volatile unsigned char load = 1;
 
 void *control(void *args)
 {
@@ -19,8 +20,7 @@ void *control(void *args)
 	
 	pararg *parg = (pararg *)args;
 	parscomm *pcomm = parg->pcomm;
-	contpar cpar = {50, 50, 0};
-	struct timespec sleepTime = {0, 5000000L};
+	contpar cpar = {0, 0, 0};
 
 	pthread_t controller_thread;
 
@@ -67,7 +67,9 @@ void *control(void *args)
 		update_controller(&cpar);
 		
 		int angle_diff = (int)round(cpar.requested_angle - cpar.reported_angle);
+		angle_diff = saturate(angle_diff, -MAX_VALUE, MAX_VALUE, NULL);
 		cpar.reported_angle += angle_diff;
+		cpar.reported_angle = saturate(cpar.reported_angle, MIN_VALUE, MAX_VALUE, NULL);
 
 		if (angle_diff > 0)
 		{	
@@ -99,8 +101,6 @@ void *control(void *args)
 		update_controller(&cpar);
 		
 		grant_ownership(parg, CONTROL, CONTROL | TERMINAL);
-
-		//nanosleep(&sleepTime, NULL);
 
 		request_ownership(parg, CONTROL);
 	}

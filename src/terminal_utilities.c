@@ -2,6 +2,7 @@
 #include <termios.h>
 #include <stdio.h>
 #include <pthread.h>
+#include <string.h>
 #include "terminal_utilities.h"
 
 static struct termios old, new;
@@ -88,10 +89,10 @@ void *keyboard_handler(void *args)
 {
   timestamp_printf("Starting manual input service!\n");
 
-	pararg *parg = (pararg *)args;
-	parscomm *pcomm = parg->pcomm;
+  pararg *parg = (pararg *)args;
+  parscomm *pcomm = parg->pcomm;
   char c, buffer[BUFFER_SIZE];
-  
+
   printf("\nPress [crtl]+[m] or [enter] to enter manual command.\n\r\033[2A");
 
   while (!quit)
@@ -104,16 +105,27 @@ void *keyboard_handler(void *args)
       printf("\n\r\033[K");
       timestamp_force_printf("Enter manual command: ");
 
-      // while ((c = getchar()) != '\n' && c != EOF);
       scanf("%s", buffer);
-      // fgets(buffer, BUFFER_SIZE, stdin);
-      while ((c = getchar()) != '\n' && c != EOF);
+      
+      //Clear buffer
+      while ((c = getchar()) != '\n' && c != EOF)
+        ;
+
+      parscomm oldpcomm = *pcomm;
+      parse(&oldpcomm, buffer, MIN_VALUE, MAX_VALUE, OK);
 
       request_ownership(parg, TERMINAL);
-      if(!quit)
-        parse(pcomm, buffer, MIN_VALUE, MAX_VALUE, OK);
+      int try = 0;
+      do
+      {
+        timestamp_force_printf("try #%i: command '%s', argument '%s'\n", ++try, oldpcomm.command, oldpcomm.argument);
 
-      wait_for_response(parg, TERMINAL, CLIENT);
+        strcpy(pcomm->command, oldpcomm.command);
+        strcpy(pcomm->argument, oldpcomm.argument);
+
+        wait_for_response(parg, TERMINAL, CLIENT);
+      } while (!quit && !is_empty(oldpcomm.command) && (is_empty(pcomm->command) || strstr(oldpcomm.command, pcomm->command) == NULL));
+
       timestamp_force_printf("Server responded: %s\n", parg->buffer);
       grant_ownership(parg, TERMINAL, CONTROL);
 
@@ -121,18 +133,13 @@ void *keyboard_handler(void *args)
       printf("\nPress [crtl]+[m] or [enter] to enter manual command.\n\r\033[2A");
     }
   }
-  
+
   timestamp_printf("Closing manual input service!\n");
 
   pthread_exit(NULL);
 }
 
 void quit_keyboard_handler()
-{
-  quit = 1;
-}
-
-void running_keyboard_handler()
 {
   quit = 1;
 }

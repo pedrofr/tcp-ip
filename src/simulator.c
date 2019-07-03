@@ -16,7 +16,7 @@ void *simulate(void *args)
 	pararg *parg = (pararg *)args;
 	parscomm *pcomm = parg->pcomm;
 
-	char plant_running = 0, quit = 0;
+	unsigned char plant_running = 0, quit = 0;
 
 	pthread_t plant_thread;
 

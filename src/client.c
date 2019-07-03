@@ -21,9 +21,9 @@
 
 #define h_addr h_addr_list[0] /* for backward compatibility */
 
-#define TIMEOUT  \
-  {              \
-    0, 225000000L \
+#define TIMEOUT   \
+  {               \
+    0, 250000000L \
   }
 
 int clear_queue(struct pollfd *fds, char *buffer, int bsize, struct sockaddr *addr, unsigned int *addrlen);
@@ -47,7 +47,8 @@ int main(int argc, char *argv[])
 
   if (argc < 3)
   {
-    errorf("Usage: %s <hostname> <port>\n", argv[0]);
+    fprintf(stderr, "Usage: %s <hostname> <port>", argv[0]);
+    exit(0);
   }
 
   // portno = atoi(argv[2]);
@@ -55,7 +56,8 @@ int main(int argc, char *argv[])
   /* Create the UDP socket */
   if ((sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
   {
-    errorf("Failed to create socket");
+    fprintf(stderr, "Failed to create socket");
+    exit(0);
   }
 
   // sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -101,8 +103,8 @@ int main(int argc, char *argv[])
 
       if (echoserver.sin_addr.s_addr != echoclient.sin_addr.s_addr)
       {
-        timestamp_printf("Starting search for server @%s!\n", inet_ntoa(echoclient.sin_addr));
-        errorf("Received a packet from an unexpected server");
+        fprintf(stderr, "Received a packet from an unexpected server");
+        exit(0);
       }
 
       parg.buffer[received] = '\0';
@@ -113,7 +115,8 @@ int main(int argc, char *argv[])
       }
       else
       {
-        errorf("Received an unrecognized message from server (%s)", parg.buffer);
+        fprintf(stderr, "Received an unrecognized message from server (%s)", parg.buffer);
+        exit(0);
       }
     }
   }
@@ -126,7 +129,7 @@ int main(int argc, char *argv[])
 
   if ((errnum = pthread_create(&control_thread, NULL, control, &parg)))
   {
-    errorf("\nThread creation failed: %d\n", errnum);
+    errorf("Thread creation failed: %d", errnum);
   }
 
   while (loading_control())
@@ -140,11 +143,10 @@ int main(int argc, char *argv[])
     {
       empty(pcomm.command);
       empty(pcomm.argument);
-      timestamp_printf("granter: %u\n", parg.granter & (CONTROL | TERMINAL));
-      timestamp_printf("me: %u\n", parg.holder);
       grant_ownership(&parg, CLIENT, parg.granter & (CONTROL | TERMINAL));
       continue;
     }
+
     if (is_empty(pcomm.argument))
     {
       sprintf(parg.buffer, "%s!", pcomm.command);
@@ -154,42 +156,39 @@ int main(int argc, char *argv[])
       sprintf(parg.buffer, "%s#%s!", pcomm.command, pcomm.argument);
     }
 
+    empty(pcomm.command);
+    empty(pcomm.argument);
+
     /* Send the word to the server */
     echolen = strlen(parg.buffer);
 
-    int n = sendto(sock, parg.buffer, echolen, 0,
-                   (struct sockaddr *)&echoserver,
-                   sizeof(echoserver));
-
-    // printf("echolen: %i\nn: %i\n", echolen, n);
-    if (n != (int)echolen)
+    if (sendto(sock, parg.buffer, echolen, 0,
+               (struct sockaddr *)&echoserver,
+               sizeof(echoserver)) != (int)echolen)
     {
       errorf("Mismatch in number of sent bytes");
     }
 
     empty(parg.buffer);
-    unsigned char read = 0;
 
-    // Clean queue
+    // Clear queue
     //clear_queue(&fds, parg.buffer, BUFFER_SIZE, (struct sockaddr *)&echoclient, &clientlen);
-    
-    if ((ppoll(&fds, 1, &timeout, NULL)))
+    received = 0;
+    if (ppoll(&fds, 1, &timeout, NULL))
     {
       received = recvfrom(sock, parg.buffer, BUFFER_SIZE, 0,
                           (struct sockaddr *)&echoclient,
                           &clientlen);
 
-      read = 1;
-    }
-
-    if (read)
-    {
       /* Check that client and server are using same socket */
       if (echoserver.sin_addr.s_addr != echoclient.sin_addr.s_addr)
       {
         errorf("Received a packet from an unexpected server");
       }
+    }
 
+    if (received)
+    {
       parg.buffer[received] = '\0'; /* Assure null terminated string */
 
       /* char oldcomm[HALF_BUFFER_SIZE]; */
@@ -203,13 +202,6 @@ int main(int argc, char *argv[])
       /*   empty(pcomm.command); */
       /*   empty(pcomm.argument); */
       /* } */
-    }
-    else
-    {
-      timestamp_printf("pcomm.command: %s | pcomm.argument: %s\n", pcomm.command, pcomm.argument);
-      empty(pcomm.command);
-      empty(pcomm.argument);
-      timestamp_printf("pcomm.command: %s | pcomm.argument: %s\n", pcomm.command, pcomm.argument);
     }
 
     grant_ownership(&parg, CLIENT, parg.granter & (CONTROL | TERMINAL));

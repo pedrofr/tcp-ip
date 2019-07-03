@@ -98,7 +98,7 @@
             "type": "promptString",
             "id": "port",
             "description": "Provide the port.",
-            "default": "14789"
+            "default": "8334"
         },
         {
             "type": "promptString",

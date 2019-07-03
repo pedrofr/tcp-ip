@@ -41,7 +41,7 @@
 
 size_t get_timestamp(char *timestamp);
 
-static volatile char write_allowed = 1;
+static volatile unsigned char write_allowed = 1;
 
 int timestamp_printf(const char *format, ...)
 {
@@ -56,7 +56,7 @@ int timestamp_printf(const char *format, ...)
         va_start(argptr, format);
         vasprintf(&message, format, argptr);
 
-        int ret = printf("\033[K\r[%s] %s", timestamp, message);
+        int ret = printf("\033[2K\r[%s] %s", timestamp, message);
 
         fflush(stdout);
 
@@ -79,7 +79,7 @@ int timestamp_force_printf(const char *format, ...)
     va_start(argptr, format);
     vasprintf(&message, format, argptr);
 
-    int ret = printf("\033[K\r[%s] %s", timestamp, message);
+    int ret = printf("\033[2K\r[%s] %s", timestamp, message);
 
     fflush(stdout);
 

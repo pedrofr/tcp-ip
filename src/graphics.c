@@ -9,7 +9,7 @@
 #define SCREEN_W 640 //tamanho da janela que sera criada
 #define SCREEN_H 640
 #define PADDING_W 100
-#define PADDING_H 10
+#define PADDING_H 20
 
 //#define BPP 8
 //typedef Uint8 PixelType;
@@ -189,8 +189,8 @@ static volatile double _var1;
 static volatile double _var2;
 static volatile double _var3;
 
-static volatile char load = 1;
-static volatile char quit;
+static volatile unsigned char load = 1;
+static volatile unsigned char quit;
 
 void *graphics()
 {
@@ -198,8 +198,8 @@ void *graphics()
 
   int epoch = 0, last_epoch = 0;
 
-  SDL_Rect future = {PADDING_W, 0, SCREEN_W, SCREEN_H};
-  SDL_Rect past = {SCREEN_W, 0, PADDING_W, SCREEN_H};
+  SDL_Rect future = {PADDING_W, 0, SCREEN_W, SCREEN_H + PADDING_H};
+  SDL_Rect past = {SCREEN_W, 0, PADDING_W, SCREEN_H + PADDING_H};
   Tdataholder *data = datainit(SCREEN_W, SCREEN_H, EPOCH_DURATION, 110, 0, 0, 0);
   SDL_Surface *clean = SDL_CreateRGBSurface(SDL_SWSURFACE | SDL_SRCALPHA,
                                             data->canvas->Width + data->canvas->Xext,
@@ -292,7 +292,7 @@ void restart_graphics()
   load = 1;
 }
 
-char loading_graphics()
+unsigned char loading_graphics()
 {
   return load;
 }

@@ -19,8 +19,8 @@ static volatile double _delta;
 static volatile int _max = 100;
 static volatile int _level;
 
-static volatile char load;
-static volatile char quit;
+static volatile unsigned char load;
+static volatile unsigned char quit;
 
 static double out_angle_function(double time);
 
@@ -109,6 +109,19 @@ void *plant()
 			}
 		}
 
+		char saturated;
+		
+		in_angle = saturate(in_angle, MIN_VALUE, MAX_VALUE, &saturated);
+		if (saturated)
+		{
+			delta_f = 0;
+		}
+		else
+		{
+			delta_f = saturate(delta_f + in_angle, -MAX_VALUE, MAX_VALUE, NULL) - in_angle;
+		}
+		
+
 		double out_angle = out_angle_function(T);
 		double influx = 1 * sin(M_PI / 2 * in_angle / 100);
 		double outflux = (max / 100) * (level / 1.25 + 0.2) * sin(M_PI / 2 * out_angle / 100);
@@ -118,8 +131,7 @@ void *plant()
 		//Saturação
 		level = saturate(level, 0, 1, NULL);
 
-		// timestamp_printf("T: %11.4f | dT: %7.4f", T, dT);
-		// printf(" | delta_i: %9.4f | in_angle: %9.4f | out_angle: %9.4f | level: %7.4f | influx: %f | outflux %f\n", delta_i, in_angle, out_angle, level, influx, outflux);
+		timestamp_printf("T: %11.4f | dT: %7.4f | delta_i: %9.4f | in_angle: %9.4f | out_angle: %9.4f | level: %7.4f | influx: %f | outflux %f", T, dT, delta_f, in_angle, out_angle, level, influx, outflux);
 
 		pthread_mutex_lock(&mutex);
 		_delta += delta_f - delta_i;
@@ -163,7 +175,7 @@ void restart_plant()
 	load = 1;
 }
 
-char loading_plant()
+unsigned char loading_plant()
 {
 	return load;
 }

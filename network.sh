@@ -1,10 +1,10 @@
-#!/usr/bin/sh
+#!/bin/sh
 
-dev='enp63s0'
+dev='eth0'
 
 type=`basename $0`
 
-tc qdisc del dev $dev root
+#tc qdisc del dev $dev root
 #tc qdisc del dev $dev ingress
 #tc qdisc del dev ifb0 root
 iptables -t filter -F INPUT
@@ -24,13 +24,13 @@ fi
 
 if [ "$type" = "netserver" ];
 then
-    iptables -t mangle -A OUTPUT --ipv4 -d 10.1.8.0/24 -p tcp --sport 8000:8800 -j MARK --set-mark 0x02020202
-    iptables -t mangle -A OUTPUT --ipv4 -d 10.1.8.0/24 -p udp --sport 8000:8800 -j MARK --set-mark 0x02020202
-    #iptables -t mangle -A OUTPUT --ipv4 -s 10.1.8.0/24  -j MARK --set-mark 0x02020202
+    iptables -t mangle -A OUTPUT --ipv4 -d 192.168.34.0/28 -p tcp --sport 8334:8334 -j MARK --set-mark 0x02020202
+    iptables -t mangle -A OUTPUT --ipv4 -d 192.168.34.0/28 -p udp --sport 8334:8334 -j MARK --set-mark 0x02020202
+    #iptables -t mangle -A OUTPUT --ipv4 -s 192.168.34.0/28 -j MARK --set-mark 0x02020202
 else
-    iptables -t mangle -A OUTPUT --ipv4 -d 10.1.8.0/24 -p tcp --dport 8000:8800 -j MARK --set-mark 0x02020202
-    iptables -t mangle -A OUTPUT --ipv4 -d 10.1.8.0/24 -p udp --dport 8000:8800 -j MARK --set-mark 0x02020202
-    #iptables -t mangle -A OUTPUT --ipv4 -d 10.1.8.0/24  -j MARK --set-mark 0x02020202
+    iptables -t mangle -A OUTPUT --ipv4 -d 192.168.34.0/28 -p tcp --dport 8334:8334 -j MARK --set-mark 0x02020202
+    iptables -t mangle -A OUTPUT --ipv4 -d 192.168.34.0/28 -p udp --dport 8334:8334 -j MARK --set-mark 0x02020202
+    #iptables -t mangle -A OUTPUT --ipv4 -d 192.168.34.0/28 -j MARK --set-mark 0x02020202
 fi
 tc qdisc add dev $dev root handle 1: htb
 tc class add dev $dev parent 1: classid 1:1 htb rate 100mbit

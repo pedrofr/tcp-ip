@@ -8,4 +8,4 @@ typedef struct controller_parameters
 void *controller();
 void update_controller(contpar *cpar);
 void quit_controller();
-char loading_controller();
+unsigned char loading_controller();
