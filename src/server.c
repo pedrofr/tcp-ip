@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
   while (strcmp(pcomm.command, "Exit"))
   {
     //clear_queue(&fds, parg.buffer, BUFFER_SIZE, (struct sockaddr *)&echoclient, &clientlen);
-
+    //printf("Entrei\n");
     clientlen = sizeof(echoclient);
     if ((received = recvfrom(sock, parg.buffer, BUFFER_SIZE, 0,
                              (struct sockaddr *)&echoclient,
@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
 
     parg.buffer[received] = '\0';
     // printf("Client connected: %s\n", inet_ntoa(echoclient.sin_addr));
-    // printf("Message: %s\n", parg.buffer);
+    //printf("Message: %s\n", parg.buffer);
 
     parse(&pcomm, parg.buffer, MIN_VALUE, MAX_VALUE, OK);
 

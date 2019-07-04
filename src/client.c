@@ -23,7 +23,7 @@
 
 #define TIMEOUT   \
   {               \
-    0, 250000000L \
+    0, 350000000L \
   }
 
 int clear_queue(struct pollfd *fds, char *buffer, int bsize, struct sockaddr *addr, unsigned int *addrlen);

@@ -20,7 +20,7 @@ void *control(void *args)
 	
 	pararg *parg = (pararg *)args;
 	parscomm *pcomm = parg->pcomm;
-	contpar cpar = {0, 0, 0};
+	contpar cpar = {50, 50, 40};
 
 	pthread_t controller_thread;
 
@@ -66,20 +66,18 @@ void *control(void *args)
 
 		update_controller(&cpar);
 		
-		int angle_diff = (int)round(cpar.requested_angle - cpar.reported_angle);
-		angle_diff = saturate(angle_diff, -MAX_VALUE, MAX_VALUE, NULL);
-		cpar.reported_angle += angle_diff;
-		cpar.reported_angle = saturate(cpar.reported_angle, MIN_VALUE, MAX_VALUE, NULL);
+		double next_send = (int)round(cpar.requested_angle - cpar.reported_angle);
+		cpar.reported_angle += next_send;
 
-		if (angle_diff > 0)
+		if (next_send > 0)
 		{	
 			strcpy(pcomm->command, "OpenValve");
-			sprintf(pcomm->argument, "%i", angle_diff);
+			sprintf(pcomm->argument, "%i", next_send);
 		}
-		else if (angle_diff < 0)
+		else if (next_send < 0)
 		{
 			strcpy(pcomm->command, "CloseValve");
-			sprintf(pcomm->argument, "%i", -angle_diff);
+			sprintf(pcomm->argument, "%i", -next_send);
 		}
 
 		wait_for_response(parg, CONTROL, CLIENT);

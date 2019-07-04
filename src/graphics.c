@@ -5,6 +5,8 @@
 #include <stdarg.h>
 #include "graphics.h"
 #include "time_utils.h"
+#include "control_utils.h"
+#include "comm_consts.h"
 
 #define SCREEN_W 640 //tamanho da janela que sera criada
 #define SCREEN_H 640
@@ -227,6 +229,14 @@ void *graphics()
     double var2 = _var2; //inangle
     double var3 = _var3; //outangle
     pthread_mutex_unlock(&mutex);
+    
+//     var1 = saturate(var1, MIN_VALUE, MAX_VALUE, NULL);
+//     var2 = saturate(var2, MIN_VALUE, MAX_VALUE, NULL);
+//     var3 = saturate(var3, MIN_VALUE, MAX_VALUE, NULL);
+    
+    var1 = fmod(var1, MAX_VALUE);
+    var2 = fmod(var2, MAX_VALUE);
+    var3 = fmod(var3, MAX_VALUE);
 
     if (load)
     {

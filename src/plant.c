@@ -10,10 +10,6 @@
 #include "comm_consts.h"
 #include "time_utils.h"
 
-#define LEVEL_RATE 0.00002
-#define VALVE_RATE 0.01
-#define PLANT_PERIOD {0, 10000000L}
-
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static volatile double _delta;
 static volatile int _max = 100;
@@ -110,17 +106,6 @@ void *plant()
 		}
 
 		char saturated;
-		
-		in_angle = saturate(in_angle, MIN_VALUE, MAX_VALUE, &saturated);
-		if (saturated)
-		{
-			delta_f = 0;
-		}
-		/* else */
-		/* { */
-		/* 	delta_f = saturate(delta_f + in_angle, -MAX_VALUE, MAX_VALUE, NULL) - in_angle; */
-		/* } */
-		
 
 		double out_angle = out_angle_function(T);
 		double influx = 1 * sin(M_PI / 2 * in_angle / 100);
@@ -131,7 +116,7 @@ void *plant()
 		//Saturação
 		level = saturate(level, 0, 1, NULL);
 
-		timestamp_printf("T: %11.4f | dT: %7.4f | delta_i: %9.4f | in_angle: %9.4f | out_angle: %9.4f | level: %7.4f | influx: %f | outflux %f", T, dT, delta_f, in_angle, out_angle, level, influx, outflux);
+		//timestamp_printf("T: %11.4f | dT: %7.4f | delta_i: %9.4f | in_angle: %9.4f | out_angle: %9.4f | level: %7.4f | influx: %f | outflux %f", T, dT, delta_f, in_angle, out_angle, level, influx, outflux);
 
 		pthread_mutex_lock(&mutex);
 		_delta += delta_f - delta_i;

@@ -11,12 +11,6 @@
 #include "comm_consts.h"
 #include "time_utils.h"
 
-#define BEYOND_SATURATION 0
-#define CONTROLLER_PERIOD \
-	{                     \
-		0, 100000000L      \
-	}
-
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static volatile int _requested_angle;
 static volatile int _reported_angle;
@@ -31,7 +25,8 @@ void *controller()
 {
 	timestamp_printf("Starting controller!\n");
 
-	double angle = 50, reference = 60;
+	double angle = 50, reference = 80;
+	double internal_angle = angle;
 
 	struct timespec time_start, time_last, time_current;
 
@@ -65,10 +60,35 @@ void *controller()
 		//		last_angle = angle;
 		angle = pid(dT, level, reference);
 		
-		timestamp_printf("T: %11.4f | dT: %7.4f | angle: %f", T, dT, angle);
+		double delta = angle - internal_angle;
+		
+		if (delta > 0)
+		{
+			if (delta < VALVE_RATE * dT)
+			{
+				internal_angle += delta;
+			}
+			else
+			{
+				internal_angle += VALVE_RATE * dT;
+			}
+		}
+		else if (delta < 0)
+		{
+			if (delta > -VALVE_RATE * dT)
+			{
+				internal_angle += delta;
+			}
+			else
+			{
+				internal_angle -= VALVE_RATE * dT;
+			}
+		}
+		
+		timestamp_printf("T: %11.4f | dT: %7.4f | angle: %f | internal_angle: %f | angle_diff: %f", T, dT, angle, internal_angle, delta);
 
 		pthread_mutex_lock(&mutex);
-		_requested_angle = angle;
+		_requested_angle = internal_angle;
 		//		_reported_angle = last_angle;
 		pthread_mutex_unlock(&mutex);
 
@@ -87,14 +107,14 @@ void *controller()
 
 double pid(double dT, double level, double reference)
 {
-	static double Max_Valve = MAX_VALUE + BEYOND_SATURATION;
-	static double Min_Valve = MIN_VALUE - BEYOND_SATURATION;
+	static double Max_Valve = MAX_VALUE;
+	static double Min_Valve = MIN_VALUE;
 	static double error_acceptable = 0.01;
-	static volatile double Kp = 23;
+	static volatile double Kp = 10;
 	static volatile double Kd = 0;
 	//static volatile double Kd = 2956.510641/100;
-	static volatile double Ki = 0.005;
-	//	static volatile double Ki = 0.05;
+	static volatile double Ki = 0.001;
+	//	static volatile doubl0e Ki = 0.05;
 	static double pre_error = 0;
 	static double integral = 0;
 	static char saturation = 0;

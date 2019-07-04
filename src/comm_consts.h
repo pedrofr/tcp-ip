@@ -11,3 +11,9 @@
 #define TERMINAL    0b00010000
 
 #define NOWAIT {0, 0}
+
+#define LEVEL_RATE 0.00002
+#define VALVE_RATE 0.01
+
+#define PLANT_PERIOD {0, 10000000L}
+#define CONTROLLER_PERIOD {0, 75000000L}
