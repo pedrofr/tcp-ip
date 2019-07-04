@@ -198,19 +198,19 @@ void *graphics()
 
   int epoch = 0, last_epoch = 0;
 
-  /* SDL_Rect future = {PADDING_W, 0, SCREEN_W, SCREEN_H + PADDING_H}; */
-  /* SDL_Rect past = {SCREEN_W, 0, PADDING_W, SCREEN_H + PADDING_H}; */
-  /* Tdataholder *data = datainit(SCREEN_W, SCREEN_H, EPOCH_DURATION, 110, 0, 0, 0); */
-  /* SDL_Surface *clean = SDL_CreateRGBSurface(SDL_SWSURFACE | SDL_SRCALPHA, */
-  /*                                           data->canvas->Width + data->canvas->Xext, */
-  /*                                           data->canvas->Height + data->canvas->Yext, */
-  /*                                           32, */
-  /*                                           0xFF000000, */
-  /*                                           0x00FF0000, */
-  /*                                           0x0000FF00, */
-  /*                                           0x000000FF); */
+  SDL_Rect future = {PADDING_W, 0, SCREEN_W, SCREEN_H + PADDING_H};
+  SDL_Rect past = {SCREEN_W, 0, PADDING_W, SCREEN_H + PADDING_H};
+  Tdataholder *data = datainit(SCREEN_W, SCREEN_H, EPOCH_DURATION, 110, 0, 0, 0);
+  SDL_Surface *clean = SDL_CreateRGBSurface(SDL_SWSURFACE | SDL_SRCALPHA,
+                                            data->canvas->Width + data->canvas->Xext,
+                                            data->canvas->Height + data->canvas->Yext,
+                                            32,
+                                            0xFF000000,
+                                            0x00FF0000,
+                                            0x0000FF00,
+                                            0x000000FF);
 
-  /* SDL_BlitSurface(data->canvas->canvas, NULL, clean, NULL); */
+  SDL_BlitSurface(data->canvas->canvas, NULL, clean, NULL);
 
   struct timespec time_start;
 
@@ -242,7 +242,7 @@ void *graphics()
       now(&time_start);
       pspec.time_next = time_start;
 
-      /* SDL_BlitSurface(clean, NULL, data->canvas->canvas, NULL); */
+      SDL_BlitSurface(clean, NULL, data->canvas->canvas, NULL);
 
       timestamp_printf("Done restarting graphics!\n");
 
@@ -254,13 +254,13 @@ void *graphics()
     {
       last_epoch = epoch;
 
-      /* SDL_BlitSurface(data->canvas->canvas, &past, data->canvas->canvas, NULL); */
-      /* SDL_BlitSurface(clean, &future, data->canvas->canvas, &future); */
+      SDL_BlitSurface(data->canvas->canvas, &past, data->canvas->canvas, NULL);
+      SDL_BlitSurface(clean, &future, data->canvas->canvas, &future);
 
-      /* data->Tcurrent = fmod(time, EPOCH_DURATION); */
+      data->Tcurrent = fmod(time, EPOCH_DURATION);
     }
 
-    /* datadraw(data, fmod(time, EPOCH_DURATION), var1, var2, var3); */
+    datadraw(data, fmod(time, EPOCH_DURATION), var1, var2, var3);
 
     ensure_period(&pspec);
   }
