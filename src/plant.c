@@ -116,10 +116,10 @@ void *plant()
 		{
 			delta_f = 0;
 		}
-		else
-		{
-			delta_f = saturate(delta_f + in_angle, -MAX_VALUE, MAX_VALUE, NULL) - in_angle;
-		}
+		/* else */
+		/* { */
+		/* 	delta_f = saturate(delta_f + in_angle, -MAX_VALUE, MAX_VALUE, NULL) - in_angle; */
+		/* } */
 		
 
 		double out_angle = out_angle_function(T);

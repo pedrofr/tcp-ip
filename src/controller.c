@@ -11,6 +11,7 @@
 #include "comm_consts.h"
 #include "time_utils.h"
 
+#define BEYOND_SATURATION 0
 #define CONTROLLER_PERIOD \
 	{                     \
 		0, 100000000L      \
@@ -86,10 +87,10 @@ void *controller()
 
 double pid(double dT, double level, double reference)
 {
-	static double Max_Valve = MAX_VALUE+1;
-	static double Min_Valve = MIN_VALUE-1;
+	static double Max_Valve = MAX_VALUE + BEYOND_SATURATION;
+	static double Min_Valve = MIN_VALUE - BEYOND_SATURATION;
 	static double error_acceptable = 0.01;
-	static volatile double Kp = 22.94;
+	static volatile double Kp = 23;
 	static volatile double Kd = 0;
 	//static volatile double Kd = 2956.510641/100;
 	static volatile double Ki = 0.005;
