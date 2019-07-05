@@ -1,8 +1,10 @@
 #define _GNU_SOURCE
+
 #include <termios.h>
 #include <stdio.h>
 #include <pthread.h>
 #include <string.h>
+
 #include "terminal_utilities.h"
 
 static struct termios old, new;

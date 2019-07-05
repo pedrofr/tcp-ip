@@ -1,7 +1,5 @@
 #define _GNU_SOURCE /* See feature_test_macros(7) */
 
-/* A simple server in the internet domain using TCP
-   The port number is passed as an argument */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,15 +9,13 @@
 #include <netinet/in.h>
 #include <err.h>
 #include <pthread.h>
-#include "error.h"
-#include "comm_consts.h"
-// #include "thread_utils.h"
-#include "simulator.h"
-#include "time_utils.h"
-
-// UDP
 #include <arpa/inet.h>
 #include <poll.h>
+
+#include "error.h"
+#include "comm_consts.h"
+#include "simulator.h"
+#include "time_utils.h"
 
 #define h_addr h_addr_list[0] /* for backward compatibility */
 
@@ -31,7 +27,7 @@ int main(int argc, char *argv[])
 
   int sock;
   struct sockaddr_in echoserver, echoclient;
-  unsigned int clientlen, serverlen; //, echolen;
+  unsigned int clientlen, serverlen;
   int received = 0;
 
   if (argc != 2)
@@ -74,8 +70,6 @@ int main(int argc, char *argv[])
 
   while (strcmp(pcomm.command, "Exit"))
   {
-    //clear_queue(&fds, parg.buffer, BUFFER_SIZE, (struct sockaddr *)&echoclient, &clientlen);
-    //printf("Entrei\n");
     clientlen = sizeof(echoclient);
     if ((received = recvfrom(sock, parg.buffer, BUFFER_SIZE, 0,
                              (struct sockaddr *)&echoclient,
@@ -120,25 +114,4 @@ int main(int argc, char *argv[])
   timestamp_printf("Closing server!\n");
 
   return 0;
-}
-
-int clear_queue(struct pollfd *fds, char *buffer, int bsize, struct sockaddr *addr, unsigned int *addrlen)
-{
-  int read = 0, received = 0;
-  struct timespec nowait = NOWAIT;
-
-  if ((ppoll(fds, 1, &nowait, NULL)))
-  {
-    do
-    {
-      received = recvfrom(fds->fd, buffer, bsize, 0, addr, addrlen);
-
-      read = 1;
-    } while ((ppoll(fds, 1, &nowait, NULL)));
-  }
-
-  if (read)
-    buffer[received] = '\0'; /* Assure null terminated string */
-
-  return read;
 }

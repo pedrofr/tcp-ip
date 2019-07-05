@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include <math.h>
 #include <stddef.h>
+
 #include "error.h"
 #include "plant.h"
 #include "graphics.h"
@@ -15,8 +16,8 @@ static volatile double _delta;
 static volatile int _max = 100;
 static volatile int _level;
 
-static volatile unsigned char load;
-static volatile unsigned char quit;
+static volatile sig_atomic_t load;
+static volatile sig_atomic_t quit;
 
 static double out_angle_function(double time);
 
@@ -24,8 +25,8 @@ void *plant()
 {
 	timestamp_printf("Starting plant!\n");
 
-	double in_angle = 50;
-	double level = 0.4;
+	double in_angle = INITIAL_ANGLE;
+	double level = (double)INITIAL_LEVEL/100;
 
 	struct timespec time_start, time_last, time_current;
 
@@ -55,8 +56,8 @@ void *plant()
 			timestamp_printf("Restarting plant!\n");
 			restart_graphics();
 
-			in_angle = 50;
-			level = 0.4;
+			in_angle = INITIAL_ANGLE;
+			level = (double)INITIAL_LEVEL/100;
 			delta_i = _delta = 0;
 			_level = level;
 
@@ -105,8 +106,6 @@ void *plant()
 			}
 		}
 
-		char saturated;
-
 		double out_angle = out_angle_function(T);
 		double influx = 1 * sin(M_PI / 2 * in_angle / 100);
 		double outflux = (max / 100) * (level / 1.25 + 0.2) * sin(M_PI / 2 * out_angle / 100);
@@ -116,14 +115,16 @@ void *plant()
 		//Saturação
 		level = saturate(level, 0, 1, NULL);
 
-		//timestamp_printf("T: %11.4f | dT: %7.4f | delta_i: %9.4f | in_angle: %9.4f | out_angle: %9.4f | level: %7.4f | influx: %f | outflux %f", T, dT, delta_f, in_angle, out_angle, level, influx, outflux);
+		timestamp_printf("T: %11.4f | dT: %7.4f", T, dT);
+
+		//printf(" | delta_i: %9.4f | in_angle: %9.4f | out_angle: %9.4f | level: %7.4f | influx: %f | outflux %f", delta_f, in_angle, out_angle, level, influx, outflux);
 
 		pthread_mutex_lock(&mutex);
 		_delta += delta_f - delta_i;
 		_level = (int)round(level * 100);
 		pthread_mutex_unlock(&mutex);
 
-		update_graphics(T / 1000, level * 100, in_angle, out_angle);
+		update_graphics(level * 100, in_angle, out_angle);
 		
 		ensure_period(&pspec);
 	}
@@ -160,7 +161,7 @@ void restart_plant()
 	load = 1;
 }
 
-unsigned char loading_plant()
+sig_atomic_t loading_plant()
 {
 	return load;
 }

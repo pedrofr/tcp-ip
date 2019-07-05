@@ -1,4 +1,5 @@
+#include <signal.h>
 #include "thread_utils.h"
 
 void *control(void *args);
-char loading_control();
+sig_atomic_t loading_control();

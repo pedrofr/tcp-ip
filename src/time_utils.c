@@ -1,8 +1,11 @@
 #define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <signal.h>
+
 #include "time_utils.h"
 
 /* Operations on timespecs. -- TAKEN FROM https://github.com/openbsd/src/blob/master/sys/sys/time.h */
@@ -39,9 +42,9 @@
 
 #define TIMESTAMP_SIZE 26
 
-size_t get_timestamp(char *timestamp);
+static volatile sig_atomic_t write_allowed = 1;
 
-static volatile unsigned char write_allowed = 1;
+size_t get_timestamp(char *timestamp);
 
 int timestamp_printf(const char *format, ...)
 {
@@ -96,31 +99,17 @@ size_t get_timestamp(char *timestamp)
 
 int now(struct timespec *time)
 {
-    return clock_gettime(CLOCK_MONOTONIC_RAW, time);
+    return clock_gettime(CLOCK_MONOTONIC, time);
 }
 
 int ensure_period(perspec *pspec)
 {
-    struct timespec time_now, sleep_time;
     timespecadd(&pspec->time_next, &pspec->period, &pspec->time_next);
 
-    int error;
-    if ((error = now(&time_now)))
-    {
-        return error;
-    }
+    int ret;
+    while ((ret = clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &pspec->time_next, NULL)));
 
-    timespecsub(&pspec->time_next, &time_now, &sleep_time);
-
-    while (nanosleep(&sleep_time, &sleep_time) && timespeccmp(&pspec->time_next, &time_now, >))
-    {
-        if ((error = now(&time_now)))
-        {
-            return error;
-        }
-    }
-
-    return 0;
+    return ret;
 }
 
 double timediff(const struct timespec *x, const struct timespec *y)

@@ -9,24 +9,18 @@
 #include <netinet/in.h>
 #include <pthread.h>
 #include <netdb.h>
+#include <arpa/inet.h>
+#include <time.h>
+#include <poll.h>
+
 #include "error.h"
 #include "comm_consts.h"
 #include "control.h"
 #include "time_utils.h"
 
-#include <arpa/inet.h>
-#include <time.h>
-
-#include <poll.h>
-
 #define h_addr h_addr_list[0] /* for backward compatibility */
 
-#define TIMEOUT   \
-  {               \
-    0, 350000000L \
-  }
-
-int clear_queue(struct pollfd *fds, char *buffer, int bsize, struct sockaddr *addr, unsigned int *addrlen);
+int clear_queue(struct pollfd *fds_in, char *buffer, int bsize, struct sockaddr *addr, unsigned int *addrlen);
 
 int main(int argc, char *argv[])
 {
@@ -34,11 +28,9 @@ int main(int argc, char *argv[])
 
   int sock, ready;
   struct sockaddr_in echoserver;
-  struct sockaddr_in echoclient;
   struct hostent *server;
-  unsigned int echolen, clientlen;
-  int received = 0;
-  struct timespec timeout = TIMEOUT;
+  ssize_t sent_len, received_len;
+  struct timespec timeout = CLIENT_TIMEOUT;
 
   parscomm pcomm = {"", ""};
   pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -51,18 +43,12 @@ int main(int argc, char *argv[])
     exit(0);
   }
 
-  // portno = atoi(argv[2]);
-
   /* Create the UDP socket */
   if ((sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
   {
     fprintf(stderr, "Failed to create socket");
     exit(0);
   }
-
-  // sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  // if (sockfd < 0)
-  //   errorf("ERROR opening socket");
 
   server = gethostbyname(argv[1]);
   if (server == NULL)
@@ -80,44 +66,37 @@ int main(int argc, char *argv[])
 
   /* Receive the word back from the server */
 
-  struct pollfd fds;
-  memset(&fds, 0, sizeof(fds));
+  struct pollfd fds_out;
+  struct pollfd fds_in;
 
-  fds.fd = sock;
-  fds.events = POLLIN;
+  memset(&fds_out, 0, sizeof(fds_out));
+  memset(&fds_in, 0, sizeof(fds_in));
+
+  fds_in.fd = fds_out.fd = sock;
+
+  fds_out.events = POLLOUT;
+  fds_in.events = POLLIN;
 
   timestamp_printf("Starting search for server @%s:%s!\n", inet_ntoa(echoserver.sin_addr), argv[2]);
 
-  while (1)
+  sent_len = strlen("CommTest!");
+  while (strcmp(parg.buffer, "Comm#OK!"))
   {
-    sendto(sock, "CommTest!", strlen("CommTest!"), 0,
-           (struct sockaddr *)&echoserver,
-           sizeof(echoserver));
-
-    if ((ready = ppoll(&fds, 1, &timeout, NULL)))
+    if (sendto(sock, "CommTest!", sent_len, MSG_DONTWAIT,
+               (struct sockaddr *)&echoserver,
+               sizeof(echoserver)) != sent_len)
     {
-      clientlen = sizeof(echoclient);
-      received = recvfrom(sock, parg.buffer, BUFFER_SIZE, 0,
-                          (struct sockaddr *)&echoclient,
-                          &clientlen);
+      errorf("Mismatch in number of sent bytes");
+    }
 
-      if (echoserver.sin_addr.s_addr != echoclient.sin_addr.s_addr)
+    if ((ready = ppoll(&fds_in, 1, &timeout, NULL)))
+    {
+      if ((received_len = recv(sock, parg.buffer, BUFFER_SIZE, MSG_DONTWAIT)) < 0)
       {
-        fprintf(stderr, "Received a packet from an unexpected server");
-        exit(0);
+        errorf("recv");
       }
-
-      parg.buffer[received] = '\0';
-
-      if (strcmp(parg.buffer, "Comm#OK!") == 0)
-      {
-        break;
-      }
-      else
-      {
-        fprintf(stderr, "Received an unrecognized message from server (%s)", parg.buffer);
-        exit(0);
-      }
+      
+      parg.buffer[received_len] = '\0';
     }
   }
 
@@ -141,7 +120,6 @@ int main(int argc, char *argv[])
 
     if (is_empty(pcomm.command))
     {
-      empty(pcomm.command);
       empty(pcomm.argument);
       grant_ownership(&parg, CLIENT, parg.granter & (CONTROL | TERMINAL));
       continue;
@@ -156,52 +134,34 @@ int main(int argc, char *argv[])
       sprintf(parg.buffer, "%s#%s!", pcomm.command, pcomm.argument);
     }
 
-    empty(pcomm.command);
-    empty(pcomm.argument);
-
     /* Send the word to the server */
-    echolen = strlen(parg.buffer);
-
-    if (sendto(sock, parg.buffer, echolen, 0,
+    sent_len = strlen(parg.buffer);
+    if (sendto(sock, parg.buffer, sent_len, MSG_DONTWAIT,
                (struct sockaddr *)&echoserver,
-               sizeof(echoserver)) != (int)echolen)
+               sizeof(echoserver)) != sent_len)
     {
       errorf("Mismatch in number of sent bytes");
     }
 
     empty(parg.buffer);
 
-    // Clear queue
-    //clear_queue(&fds, parg.buffer, BUFFER_SIZE, (struct sockaddr *)&echoclient, &clientlen);
-    received = 0;
-    if (ppoll(&fds, 1, &timeout, NULL))
+    if (ppoll(&fds_in, 1, &timeout, NULL))
     {
-      received = recvfrom(sock, parg.buffer, BUFFER_SIZE, 0,
-                          (struct sockaddr *)&echoclient,
-                          &clientlen);
-
-      /* Check that client and server are using same socket */
-      if (echoserver.sin_addr.s_addr != echoclient.sin_addr.s_addr)
+      if ((received_len = recv(sock, parg.buffer, BUFFER_SIZE, MSG_DONTWAIT)) < 0)
       {
-        errorf("Received a packet from an unexpected server");
+        errorf("recv");
       }
-    }
+      else if (received_len)
+      {
+        parg.buffer[received_len] = '\0'; /* Assure null terminated string */
 
-    if (received)
-    {
-      parg.buffer[received] = '\0'; /* Assure null terminated string */
-
-      /* char oldcomm[HALF_BUFFER_SIZE]; */
-      /* strcpy(oldcomm, pcomm.command); */
-
-      parse(&pcomm, parg.buffer, MIN_VALUE, MAX_VALUE, OK);
-
-      /* if (!is_empty(pcomm.command) && strstr(oldcomm, pcomm.command) == NULL) */
-      /* { */
-      /*   timestamp_printf("oldcomm: %s | pcomm.command: %s | parg.buffer: %s\n", oldcomm, pcomm.command, parg.buffer); */
-      /*   empty(pcomm.command); */
-      /*   empty(pcomm.argument); */
-      /* } */
+        parse(&pcomm, parg.buffer, MIN_VALUE, MAX_VALUE, OK);
+      }
+      else
+      {
+        empty(pcomm.command);
+        empty(pcomm.argument);
+      }
     }
 
     grant_ownership(&parg, CLIENT, parg.granter & (CONTROL | TERMINAL));
@@ -213,25 +173,4 @@ int main(int argc, char *argv[])
   timestamp_printf("Closing client!\n");
 
   return 0;
-}
-
-int clear_queue(struct pollfd *fds, char *buffer, int bsize, struct sockaddr *addr, unsigned int *addrlen)
-{
-  int read = 0, received = 0;
-  struct timespec nowait = NOWAIT;
-
-  if ((ppoll(fds, 1, &nowait, NULL)))
-  {
-    do
-    {
-      received = recvfrom(fds->fd, buffer, bsize, 0, addr, addrlen);
-
-      read = 1;
-    } while ((ppoll(fds, 1, &nowait, NULL)));
-  }
-
-  if (read)
-    buffer[received] = '\0'; /* Assure null terminated string */
-
-  return read;
 }

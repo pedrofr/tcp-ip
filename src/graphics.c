@@ -3,15 +3,16 @@
 #include <math.h>
 #include <pthread.h>
 #include <stdarg.h>
+
 #include "graphics.h"
 #include "time_utils.h"
 #include "control_utils.h"
 #include "comm_consts.h"
 
 #define SCREEN_W 640 //tamanho da janela que sera criada
-#define SCREEN_H 640
+#define SCREEN_H 480
 #define PADDING_W 100
-#define PADDING_H 20
+#define PADDING_H 10
 
 //#define BPP 8
 //typedef Uint8 PixelType;
@@ -178,21 +179,14 @@ static void quitevent()
   }
 }
 
-#define GRAPHICS_PERIOD \
-  {                     \
-    0, 50000000L        \
-  }
-#define EPOCH_DURATION 60
-
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
-static volatile double _time;
 static volatile double _var1;
 static volatile double _var2;
 static volatile double _var3;
 
-static volatile unsigned char load = 1;
-static volatile unsigned char quit;
+static volatile sig_atomic_t load = 1;
+static volatile sig_atomic_t quit;
 
 void *graphics()
 {
@@ -214,7 +208,7 @@ void *graphics()
 
   SDL_BlitSurface(data->canvas->canvas, NULL, clean, NULL);
 
-  struct timespec time_start;
+  struct timespec time_start, time_current;
 
   now(&time_start);
   perspec pspec = {time_start, GRAPHICS_PERIOD};
@@ -224,19 +218,21 @@ void *graphics()
   while (!quit)
   {
     pthread_mutex_lock(&mutex);
-    double time = _time;
     double var1 = _var1; //level
     double var2 = _var2; //inangle
     double var3 = _var3; //outangle
     pthread_mutex_unlock(&mutex);
+
+		now(&time_current);
+		double time = timediff(&time_current, &time_start)/1000;
     
-//     var1 = saturate(var1, MIN_VALUE, MAX_VALUE, NULL);
-//     var2 = saturate(var2, MIN_VALUE, MAX_VALUE, NULL);
-//     var3 = saturate(var3, MIN_VALUE, MAX_VALUE, NULL);
+    var1 = saturate(var1, MIN_VALUE, MAX_VALUE, NULL);
+    var2 = saturate(var2, MIN_VALUE, MAX_VALUE, NULL);
+    var3 = saturate(var3, MIN_VALUE, MAX_VALUE, NULL);
     
-    var1 = fmod(var1, MAX_VALUE);
-    var2 = fmod(var2, MAX_VALUE);
-    var3 = fmod(var3, MAX_VALUE);
+    // var1 = fmod(var1, MAX_VALUE);
+    // var2 = fmod(var2, MAX_VALUE);
+    // var3 = fmod(var3, MAX_VALUE);
 
     if (load)
     {
@@ -244,7 +240,6 @@ void *graphics()
       timestamp_printf("Restarting graphics!\n");
 
       epoch = last_epoch = 0;
-      time = _time = 0;
       var1 = _var1 = 0; //level
       var2 = _var2 = 0; //inangle
       var3 = _var3 = 0; //outangle
@@ -282,10 +277,9 @@ void *graphics()
   pthread_exit(NULL);
 }
 
-void update_graphics(double time, double var1, double var2, double var3)
+void update_graphics(double var1, double var2, double var3)
 {
   pthread_mutex_lock(&mutex);
-  _time = time;
   _var1 = var1; //level
   _var2 = var2; //inangle
   _var3 = var3; //outangle
@@ -302,7 +296,7 @@ void restart_graphics()
   load = 1;
 }
 
-unsigned char loading_graphics()
+sig_atomic_t loading_graphics()
 {
   return load;
 }

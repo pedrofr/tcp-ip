@@ -3,53 +3,39 @@
 #include <pthread.h>
 #include <math.h>
 #include <stddef.h>
+
 #include "error.h"
 #include "plant.h"
-#include "graphics.h"
 #include "control_utils.h"
 #include "controller.h"
 #include "comm_consts.h"
 #include "time_utils.h"
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-static volatile int _requested_angle;
-static volatile int _reported_angle;
+static volatile int _angle;
 static volatile int _level;
 
-static volatile unsigned char quit;
-static volatile unsigned char load = 1;
+static volatile sig_atomic_t quit;
+static volatile sig_atomic_t load = 1;
 
-double pid(double dT, double level, double reference);
+int pid(double dT, int level, int reference);
 
 void *controller()
 {
 	timestamp_printf("Starting controller!\n");
 
-	double angle = 50, reference = 80;
-	double internal_angle = angle;
-
+	double reference = REFERENCE;
 	struct timespec time_start, time_last, time_current;
-
-	pthread_t graph_thread;
-
-	int errnum;
-	if ((errnum = pthread_create(&graph_thread, NULL, graphics, NULL)))
-	{
-		errorf("\nThread creation failed: %d\n", errnum);
-	}
 
 	now(&time_start);
 	time_last = time_current = time_start;
 	perspec pspec = {time_start, CONTROLLER_PERIOD};
-
-	while (loading_graphics());
 	load = 0;
 
 	while (!quit)
 	{
 		pthread_mutex_lock(&mutex);
-		double level = _level;
-		// double reported_angle = _reported_angle;
+		int level = _level;
 		pthread_mutex_unlock(&mutex);
 
 		now(&time_current);
@@ -57,67 +43,32 @@ void *controller()
 		double dT = timediff(&time_current, &time_last);
 		time_last = time_current;
 
-		//		last_angle = angle;
-		angle = pid(dT, level, reference);
-		
-		double delta = angle - internal_angle;
-		
-		if (delta > 0)
-		{
-			if (delta < VALVE_RATE * dT)
-			{
-				internal_angle += delta;
-			}
-			else
-			{
-				internal_angle += VALVE_RATE * dT;
-			}
-		}
-		else if (delta < 0)
-		{
-			if (delta > -VALVE_RATE * dT)
-			{
-				internal_angle += delta;
-			}
-			else
-			{
-				internal_angle -= VALVE_RATE * dT;
-			}
-		}
-		
-		timestamp_printf("T: %11.4f | dT: %7.4f | angle: %f | internal_angle: %f | angle_diff: %f", T, dT, angle, internal_angle, delta);
+		timestamp_printf("T: %11.4f | dT: %7.4f", T, dT);
+
+		int angle = pid(dT, level, reference);
+
+		//printf(" | angle: %f\n", angle);
 
 		pthread_mutex_lock(&mutex);
-		_requested_angle = internal_angle;
-		//		_reported_angle = last_angle;
+		_angle = angle;
 		pthread_mutex_unlock(&mutex);
-
-		update_graphics(T / 1000, level, angle, 0);
 
 		ensure_period(&pspec);
 	}
-
-	quit_graphics();
-	pthread_join(graph_thread, NULL);
 
 	timestamp_printf("Closing controller!\n");
 
 	pthread_exit(NULL);
 }
 
-double pid(double dT, double level, double reference)
+int pid(double dT, int level, int reference)
 {
-	static double Max_Valve = MAX_VALUE;
-	static double Min_Valve = MIN_VALUE;
-	static double error_acceptable = 0.01;
-	static volatile double Kp = 10;
-	static volatile double Kd = 0;
-	//static volatile double Kd = 2956.510641/100;
-	static volatile double Ki = 0.001;
-	//	static volatile doubl0e Ki = 0.05;
 	static double pre_error = 0;
 	static double integral = 0;
 	static char saturation = 0;
+
+	static double internal_angle = INITIAL_ANGLE;
+
 	double error;
 	double derivative;
 	double output;
@@ -126,26 +77,53 @@ double pid(double dT, double level, double reference)
 	error = reference - level;
 
 	//If the error is too small then don't integrate
-	if (abs(error) > error_acceptable && (double)saturation*error >= 0)
+	if (abs(error) > ACCEPTABLE_ERROR && (double)saturation * error >= 0)
 		integral += error * dT;
 
 	derivative = (error - pre_error) / dT;
 
-	output = Kp * error + Ki * integral + Kd * derivative;
+	output = KP * error + KI * integral + KD * derivative;
 
 	//Update error
 	pre_error = error;
 
 	//Saturation of the output
-	return saturate(output, Min_Valve, Max_Valve, &saturation);
+	double saturated_out = saturate(output, MIN_VALUE, MAX_VALUE, &saturation);
+	double delta = saturated_out - internal_angle;
+
+	if (delta > 0)
+	{
+		if (delta < VALVE_RATE * dT)
+		{
+			internal_angle += delta;
+		}
+		else
+		{
+			internal_angle += VALVE_RATE * dT;
+		}
+	}
+	else if (delta < 0)
+	{
+		if (delta > -VALVE_RATE * dT)
+		{
+			internal_angle += delta;
+		}
+		else
+		{
+			internal_angle -= VALVE_RATE * dT;
+		}
+	}
+
+	//printf(" | saturated_out: %f | output: %f | internal_angle: %f | delta: %f", saturated_out, output, internal_angle, delta);
+
+	return (int)round(internal_angle);
 }
 
 void update_controller(contpar *cpar)
 {
 	pthread_mutex_lock(&mutex);
 	_level = cpar->level;
-	_reported_angle = cpar->reported_angle;
-	cpar->requested_angle = _requested_angle;
+	cpar->angle = _angle;
 	pthread_mutex_unlock(&mutex);
 }
 
@@ -156,7 +134,7 @@ void quit_controller()
 	pthread_mutex_unlock(&mutex);
 }
 
-unsigned char loading_controller()
+sig_atomic_t loading_controller()
 {
 	return load;
 }

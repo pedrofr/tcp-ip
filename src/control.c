@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <signal.h>
+
 #include "error.h"
 #include "control.h"
 #include "controller.h"
@@ -9,10 +11,11 @@
 #include "time_utils.h"
 #include "control_utils.h"
 #include "terminal_utilities.h"
+#include "graphics.h"
 
 #include <math.h>
 
-static volatile unsigned char load = 1;
+static volatile sig_atomic_t load = 1;
 
 void *control(void *args)
 {
@@ -20,11 +23,30 @@ void *control(void *args)
 	
 	pararg *parg = (pararg *)args;
 	parscomm *pcomm = parg->pcomm;
-	contpar cpar = {50, 50, 40};
+	contpar cpar = {INITIAL_ANGLE, INITIAL_LEVEL};
+	int estimated_angle = INITIAL_ANGLE;
 
-	pthread_t controller_thread;
+	pthread_t controller_thread, graph_thread;
 
 	int errnum;
+	if ((errnum = pthread_create(&graph_thread, NULL, graphics, NULL)))
+	{
+		errorf("\nThread creation failed: %d\n", errnum);
+	}
+
+	request_ownership(parg, CONTROL);
+	load = 0;
+
+	while (!matches_arg(pcomm->command, pcomm->argument, "Max", "100"))
+	{
+		strcpy(pcomm->command, "SetMax");
+		strcpy(pcomm->argument, "100");
+
+		wait_for_response(parg, CONTROL, CLIENT);
+	}
+
+	while (loading_graphics());
+
 	if ((errnum = pthread_create(&controller_thread, NULL, controller, NULL)))
 	{
 		errorf("\nThread creation failed: %d\n", errnum);
@@ -32,20 +54,18 @@ void *control(void *args)
 
 	while (loading_controller());
 
-	pthread_t keyboard_thread;
-	if ((errnum = pthread_create(&keyboard_thread, NULL, keyboard_handler, parg)))
-	{
-		errorf("\nThread creation failed: %d\n", errnum);
-	}
-	
-	request_ownership(parg, CONTROL);
-	load = 0;
 	while (!matches_arg(pcomm->command, pcomm->argument, "Start", OK))
 	{
 		strcpy(pcomm->command, "Start");
 		empty(pcomm->argument);
 
 		wait_for_response(parg, CONTROL, CLIENT);
+	}
+
+	pthread_t keyboard_thread;
+	if ((errnum = pthread_create(&keyboard_thread, NULL, keyboard_handler, parg)))
+	{
+		errorf("\nThread creation failed: %d\n", errnum);
 	}
 
 	while (strcmp(pcomm->command, "Exit"))
@@ -65,9 +85,11 @@ void *control(void *args)
 		}
 
 		update_controller(&cpar);
+
+		update_graphics(cpar.level, cpar.angle, 0);
 		
-		double next_send = (int)round(cpar.requested_angle - cpar.reported_angle);
-		cpar.reported_angle += next_send;
+		int next_send = cpar.angle - estimated_angle;
+		estimated_angle = cpar.angle;
 
 		if (next_send > 0)
 		{	
@@ -82,42 +104,37 @@ void *control(void *args)
 
 		wait_for_response(parg, CONTROL, CLIENT);
 
-		/* if (matches_numeric(pcomm->command, pcomm->argument, "Open")) */
-		/* { */
-		/* 	cpar.reported_angle += atof(pcomm->argument); */
-		/* } */
-		/* else if (matches_numeric(pcomm->command, pcomm->argument, "Close")) */
-		/* { */
-		/* 	cpar.reported_angle -= atof(pcomm->argument); */
-		/* } */
-		/* else  */
 		if (!strcmp(pcomm->command, "Exit"))
 		{
 			break;
 		}
 
 		update_controller(&cpar);
+
+		update_graphics(cpar.level, cpar.angle, 0);
 		
 		grant_ownership(parg, CONTROL, CONTROL | TERMINAL);
 
 		request_ownership(parg, CONTROL);
 	}
 
-	quit_controller();
-	pthread_join(controller_thread, NULL);
-
 	quit_keyboard_handler();
 	grant_ownership(parg, CONTROL, TERMINAL);
-	pthread_join(keyboard_thread, NULL);
+	quit_controller();
+	quit_graphics();
 
-	grant_ownership(parg, CONTROL, CLIENT);
+	pthread_join(controller_thread, NULL);
+	pthread_join(keyboard_thread, NULL);
+	pthread_join(graph_thread, NULL);
+
+	release_ownership(parg, CONTROL);
 
 	timestamp_printf("Closing control!\n");
 
 	pthread_exit(NULL);
 }
 
-char loading_control()
+sig_atomic_t loading_control()
 {
 	return load;
 }

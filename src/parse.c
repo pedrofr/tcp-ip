@@ -6,7 +6,7 @@
 
 #include <stdio.h> //to be removed
 
-char isNumeric(const char *s)
+bool isNumeric(const char *s)
 {
     if (s == NULL || is_empty(s) || isspace(*s))
         return 0;
@@ -15,7 +15,7 @@ char isNumeric(const char *s)
     return is_empty(p);
 }
 
-char checkRange(double value, double min_range, double max_range)
+bool checkRange(double value, double min_range, double max_range)
 {
     if (min_range > max_range)
         errorf("checkRange limits");
@@ -23,17 +23,17 @@ char checkRange(double value, double min_range, double max_range)
     return (min_range <= value) & (value <= max_range);
 }
 
-char matches_arg(const char *command, const char *argument, const char *desired_command, const char *desired_argument)
+bool matches_arg(const char *command, const char *argument, const char *desired_command, const char *desired_argument)
 {
     return strcmp(command, desired_command) == 0 && strcmp(argument, desired_argument) == 0;
 }
 
-char matches_no_arg(const char *command, const char *argument, const char *desired_command)
+bool matches_no_arg(const char *command, const char *argument, const char *desired_command)
 {
     return strcmp(command, desired_command) == 0 && is_empty(argument);
 }
 
-char matches_numeric(const char *command, const char *argument, const char *desired_command)
+bool matches_numeric(const char *command, const char *argument, const char *desired_command)
 {
     return strcmp(command, desired_command) == 0 && isNumeric(argument);
 }
