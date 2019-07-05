@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -110,17 +112,10 @@ void parse(parscomm *pcomm, const char *rawCommand, double min_range, double max
             strcpy(pcomm->command, command);
             strcpy(pcomm->argument, argument);
         }
-        else
-        {
-            //error
-        }
+        //else error
+        
     }
-    else
-    {
-        //error
-    }
+    //else error
 
     free(tofree);
-
-    return;
 }

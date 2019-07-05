@@ -3,7 +3,7 @@ BDIR = ./bin
 SDIR = ./src
 CC = gcc
 LIBS = -pthread -lm -lrt -lSDL
-OPTS = -g -Wall -Wextra -pedantic
+OPTS = -g -Wall -Wextra -pedantic -std=gnu99
 
 _PROG = server client
 _OBJ = error.o parse.o plant.o simulator.o graphics.o control_utils.o controller.o control.o thread_utils.o time_utils.o terminal_utilities.o
