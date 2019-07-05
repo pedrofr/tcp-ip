@@ -45,10 +45,13 @@ void request_ownership(pararg *parg, unsigned char id)
 
 void grant_ownership(pararg *parg, unsigned char src, unsigned char dst_mask)
 {
-	parg->holder = dst_mask;
-	parg->granter = src;
-	pthread_cond_broadcast(parg->cond);
-	pthread_mutex_unlock(parg->mutex);
+	if (dst_mask)
+	{
+		parg->holder = dst_mask;
+		parg->granter = src;
+		pthread_mutex_unlock(parg->mutex);
+		pthread_cond_broadcast(parg->cond);
+	}
 }
 
 void release_ownership(pararg *parg, unsigned char src)

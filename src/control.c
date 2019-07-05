@@ -15,6 +15,7 @@
 
 #include <math.h>
 
+static volatile sig_atomic_t quit;
 static volatile sig_atomic_t load = 1;
 
 void *control(void *args)
@@ -37,8 +38,11 @@ void *control(void *args)
 	request_ownership(parg, CONTROL);
 	load = 0;
 
+  	int try = 0;
 	while (!matches_arg(pcomm->command, pcomm->argument, "Max", "100"))
 	{
+    	timestamp_force_printf("'SetMax#100!' try #%i", ++try);
+
 		strcpy(pcomm->command, "SetMax");
 		strcpy(pcomm->argument, "100");
 
@@ -54,21 +58,23 @@ void *control(void *args)
 
 	while (loading_controller());
 
+  	try = 0;
 	while (!matches_arg(pcomm->command, pcomm->argument, "Start", OK))
 	{
+    	timestamp_force_printf("'Start!' try #%i", ++try);
 		strcpy(pcomm->command, "Start");
 		empty(pcomm->argument);
 
 		wait_for_response(parg, CONTROL, CLIENT);
 	}
 
-	pthread_t keyboard_thread;
-	if ((errnum = pthread_create(&keyboard_thread, NULL, keyboard_handler, parg)))
-	{
-		errorf("\nThread creation failed: %d\n", errnum);
-	}
+	// pthread_t keyboard_thread;
+	// if ((errnum = pthread_create(&keyboard_thread, NULL, keyboard_handler, parg)))
+	// {
+	// 	errorf("\nThread creation failed: %d\n", errnum);
+	// }
 
-	while (strcmp(pcomm->command, "Exit"))
+	while (!quit && strcmp(pcomm->command, "Exit"))
 	{
 		strcpy(pcomm->command, "GetLevel");
 		empty(pcomm->argument);
@@ -101,6 +107,11 @@ void *control(void *args)
 			strcpy(pcomm->command, "CloseValve");
 			sprintf(pcomm->argument, "%i", -next_send);
 		}
+		else
+		{
+			wait_for_response(parg, CONTROL, CONTROL | TERMINAL);
+			continue;
+		}
 
 		wait_for_response(parg, CONTROL, CLIENT);
 
@@ -113,9 +124,7 @@ void *control(void *args)
 
 		update_graphics(cpar.level, cpar.angle, 0);
 		
-		grant_ownership(parg, CONTROL, CONTROL | TERMINAL);
-
-		request_ownership(parg, CONTROL);
+		wait_for_response(parg, CONTROL, CONTROL | TERMINAL);
 	}
 
 	quit_keyboard_handler();
@@ -124,7 +133,7 @@ void *control(void *args)
 	quit_graphics();
 
 	pthread_join(controller_thread, NULL);
-	pthread_join(keyboard_thread, NULL);
+	//pthread_join(keyboard_thread, NULL);
 	pthread_join(graph_thread, NULL);
 
 	release_ownership(parg, CONTROL);
@@ -137,4 +146,9 @@ void *control(void *args)
 sig_atomic_t loading_control()
 {
 	return load;
+}
+
+void quit_control()
+{
+	quit = 1;
 }

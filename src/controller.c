@@ -39,11 +39,11 @@ void *controller()
 		pthread_mutex_unlock(&mutex);
 
 		now(&time_current);
-		double T = timediff(&time_current, &time_start);
+		//double T = timediff(&time_current, &time_start);
 		double dT = timediff(&time_current, &time_last);
 		time_last = time_current;
 
-		timestamp_printf("T: %11.4f | dT: %7.4f", T, dT);
+		//timestamp_printf("T: %11.4f | dT: %7.4f", T, dT);
 
 		int angle = pid(dT, level, reference);
 
@@ -129,9 +129,7 @@ void update_controller(contpar *cpar)
 
 void quit_controller()
 {
-	pthread_mutex_lock(&mutex);
 	quit = 1;
-	pthread_mutex_unlock(&mutex);
 }
 
 sig_atomic_t loading_controller()

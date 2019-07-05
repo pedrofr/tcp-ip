@@ -93,15 +93,20 @@ void *keyboard_handler(void *args)
 
   pararg *parg = (pararg *)args;
   parscomm *pcomm = parg->pcomm;
-  char c, buffer[BUFFER_SIZE];
+  // char c, 
+  char buffer[BUFFER_SIZE];
 
-  printf("\nPress [crtl]+[m] or [enter] to enter manual command.\n\r\033[2A");
+  //https://stackoverflow.com/questions/29989516/deep-copying-structs-with-char-arrays-in-c-how-to-copy-the-arrays?noredirect=1&lq=1
+  parscomm old_pcomm = *pcomm;
 
-  while (!quit)
+  //printf("\nPress [crtl]+[m] or [enter] to enter manual command.\n\r\033[2A");
+
+  while (!quit && strcmp(old_pcomm.command, "Exit"))
   {
-    c = getch();
-    if (c == '\n')
-    {
+    // c = getch();
+    // if (c == '\n')
+    // {
+
       suspend_timed_output();
 
       printf("\n\r\033[K");
@@ -110,30 +115,32 @@ void *keyboard_handler(void *args)
       scanf("%s", buffer);
       
       //Clear buffer
-      while ((c = getchar()) != '\n' && c != EOF)
-        ;
+      // while ((c = getchar()) != '\n' && c != EOF)
+      //   ;
 
-      parscomm oldpcomm = *pcomm;
-      parse(&oldpcomm, buffer, MIN_VALUE, MAX_VALUE, OK);
+      old_pcomm = *pcomm;
+      parse(&old_pcomm, buffer, MIN_VALUE, MAX_VALUE, OK);
 
       request_ownership(parg, TERMINAL);
       int try = 0;
       do
       {
-        timestamp_force_printf("try #%i: command '%s', argument '%s'\n", ++try, oldpcomm.command, oldpcomm.argument);
+        *pcomm = old_pcomm;
 
-        strcpy(pcomm->command, oldpcomm.command);
-        strcpy(pcomm->argument, oldpcomm.argument);
+        timestamp_force_printf("try #%i: command '%s', argument '%s'\n", ++try, pcomm->command, pcomm->argument);
 
         wait_for_response(parg, TERMINAL, CLIENT);
-      } while (!quit && !is_empty(oldpcomm.command) && (is_empty(pcomm->command) || strstr(oldpcomm.command, pcomm->command) == NULL));
+
+      } while (!quit && !is_empty(old_pcomm.command) && (is_empty(pcomm->command) || strstr(old_pcomm.command, pcomm->command) == NULL));
+
+      old_pcomm = *pcomm;
 
       timestamp_force_printf("Server responded: %s\n", parg->buffer);
       grant_ownership(parg, TERMINAL, CONTROL);
 
       restore_timed_output();
-      printf("\nPress [crtl]+[m] or [enter] to enter manual command.\n\r\033[2A");
-    }
+      //printf("\nPress [crtl]+[m] or [enter] to enter manual command.\n\r\033[2A");
+    // }
   }
 
   timestamp_printf("Closing manual input service!\n");

@@ -78,12 +78,12 @@ void parse(parscomm *pcomm, const char *rawCommand, int min_range, int max_range
 
     int length = strlen(string);
 
-    if (!length && tofree[diff - 1] == '!')
+    if (!length && rawCommand[diff - 1] == '!')
     {
         //only command
         strcpy(pcomm->command, command);
     }
-    else if (length && tofree[diff - 1] == '#')
+    else if (length && rawCommand[diff - 1] == '#')
     {
         argument = strsep(&string, "!");
 

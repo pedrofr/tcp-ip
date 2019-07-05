@@ -9,6 +9,8 @@
 #include "plant.h"
 #include "time_utils.h"
 
+static volatile sig_atomic_t quit;
+
 void *simulate(void *args)
 {
 	timestamp_printf("Starting simulator!\n");
@@ -16,11 +18,11 @@ void *simulate(void *args)
 	pararg *parg = (pararg *)args;
 	parscomm *pcomm = parg->pcomm;
 
-	unsigned char plant_running = 0, quit = 0;
+	unsigned char plant_running = 0;
 
 	pthread_t plant_thread;
 
-	while (1)
+	while (!quit)
 	{
 		wait_request(parg, SIMULATOR);
 
@@ -87,15 +89,17 @@ void *simulate(void *args)
 		}
 
 		release(parg, SIMULATOR);
-
-		if (quit)
-			break;
 	}
-
+	
 	quit_plant();
 	pthread_join(plant_thread, NULL);
 
 	timestamp_printf("Closing simulator!\n");
 
 	pthread_exit(NULL);
+}
+
+void quit_simulator()
+{
+	quit = 1;
 }

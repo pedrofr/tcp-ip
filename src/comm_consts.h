@@ -20,7 +20,7 @@
 #define SIMULATOR   0x02
 #define CLIENT      0x04
 #define CONTROL     0x08
-#define TERMINAL    0x0f
+#define TERMINAL    0x10
 #define ANY         0xff
 
 #define NOWAIT {0, 0}

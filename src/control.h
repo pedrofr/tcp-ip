@@ -3,3 +3,4 @@
 
 void *control(void *args);
 sig_atomic_t loading_control();
+void quit_control();

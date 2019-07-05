@@ -117,7 +117,7 @@ void *plant()
 		//Saturação
 		level = saturate(level, 0, 1, NULL);
 
-		timestamp_printf("T: %11.4f | dT: %7.4f", T, dT);
+		//timestamp_printf("T: %11.4f | dT: %7.4f", T, dT);
 
 		//printf(" | delta_i: %9.4f | in_angle: %9.4f | out_angle: %9.4f | level: %7.4f | influx: %f | outflux %f", delta_f, in_angle, out_angle, level, influx, outflux);
 

@@ -12,6 +12,7 @@
 #include <arpa/inet.h>
 #include <time.h>
 #include <poll.h>
+#include <fcntl.h>
 
 #include "error.h"
 #include "comm_consts.h"
@@ -19,12 +20,16 @@
 #include "time_utils.h"
 
 #define h_addr h_addr_list[0] /* for backward compatibility */
+  
+static volatile sig_atomic_t quit;
 
-int clear_queue(struct pollfd *fds_in, char *buffer, int bsize, struct sockaddr *addr, unsigned int *addrlen);
+void sigint_handler(int sig_num);
 
 int main(int argc, char *argv[])
 {
   timestamp_printf("Starting client!\n");
+
+  signal(SIGINT, sigint_handler);
 
   int sock, ready;
   struct sockaddr_in echoserver;
@@ -44,7 +49,7 @@ int main(int argc, char *argv[])
   }
 
   /* Create the UDP socket */
-  if ((sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
+  if ((sock = socket(PF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP)) < 0)
   {
     fprintf(stderr, "Failed to create socket");
     exit(0);
@@ -66,32 +71,35 @@ int main(int argc, char *argv[])
 
   /* Receive the word back from the server */
 
-  struct pollfd fds_out;
-  struct pollfd fds_in;
+  struct pollfd fd_out;
+  struct pollfd fd_in;
 
-  memset(&fds_out, 0, sizeof(fds_out));
-  memset(&fds_in, 0, sizeof(fds_in));
+  memset(&fd_out, 0, sizeof(fd_out));
+  memset(&fd_in, 0, sizeof(fd_in));
 
-  fds_in.fd = fds_out.fd = sock;
+  fd_in.fd = fd_out.fd = sock;
 
-  fds_out.events = POLLOUT;
-  fds_in.events = POLLIN;
+  fd_out.events = POLLOUT;
+  fd_in.events = POLLIN;
 
   timestamp_printf("Starting search for server @%s:%s!\n", inet_ntoa(echoserver.sin_addr), argv[2]);
 
+  int try = 0;
   sent_len = strlen("CommTest!");
-  while (strcmp(parg.buffer, "Comm#OK!"))
+  while (!quit && strcmp(parg.buffer, "Comm#OK!"))
   {
-    if (sendto(sock, "CommTest!", sent_len, MSG_DONTWAIT,
+    timestamp_force_printf("'CommTest!' try #%i", ++try);
+
+    if (sendto(sock, "CommTest!", sent_len, 0,
                (struct sockaddr *)&echoserver,
                sizeof(echoserver)) != sent_len)
     {
       errorf("Mismatch in number of sent bytes");
     }
 
-    if ((ready = ppoll(&fds_in, 1, &timeout, NULL)))
+    if ((ready = ppoll(&fd_in, 1, &timeout, NULL)))
     {
-      if ((received_len = recv(sock, parg.buffer, BUFFER_SIZE, MSG_DONTWAIT)) < 0)
+      if ((received_len = recv(sock, parg.buffer, BUFFER_SIZE, 0)) < 0)
       {
         errorf("recv");
       }
@@ -111,10 +119,10 @@ int main(int argc, char *argv[])
     errorf("Thread creation failed: %d", errnum);
   }
 
-  while (loading_control())
+  while (!quit && loading_control())
     ;
 
-  while (strcmp(pcomm.command, "Exit"))
+  while (!quit && strcmp(pcomm.command, "Exit"))
   {
     request_ownership(&parg, CLIENT);
 
@@ -136,7 +144,7 @@ int main(int argc, char *argv[])
 
     /* Send the word to the server */
     sent_len = strlen(parg.buffer);
-    if (sendto(sock, parg.buffer, sent_len, MSG_DONTWAIT,
+    if (sendto(sock, parg.buffer, sent_len, 0,
                (struct sockaddr *)&echoserver,
                sizeof(echoserver)) != sent_len)
     {
@@ -145,9 +153,9 @@ int main(int argc, char *argv[])
 
     empty(parg.buffer);
 
-    if (ppoll(&fds_in, 1, &timeout, NULL))
+    if (ppoll(&fd_in, 1, &timeout, NULL))
     {
-      if ((received_len = recv(sock, parg.buffer, BUFFER_SIZE, MSG_DONTWAIT)) < 0)
+      if ((received_len = recv(sock, parg.buffer, BUFFER_SIZE, 0)) < 0)
       {
         errorf("recv");
       }
@@ -163,9 +171,19 @@ int main(int argc, char *argv[])
         empty(pcomm.argument);
       }
     }
+    else
+    {
+      empty(pcomm.command);
+      empty(pcomm.argument);
+    }
 
     grant_ownership(&parg, CLIENT, parg.granter & (CONTROL | TERMINAL));
   }
+  
+  quit_control();
+  
+  request_ownership(&parg, CLIENT);
+  grant_ownership(&parg, CLIENT, CONTROL);
 
   close(sock);
   pthread_join(control_thread, NULL);
@@ -173,4 +191,9 @@ int main(int argc, char *argv[])
   timestamp_printf("Closing client!\n");
 
   return 0;
+}
+
+void sigint_handler(__attribute__((unused)) int sig_num)
+{
+  quit = 1;
 }

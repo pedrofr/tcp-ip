@@ -11,6 +11,7 @@
 #include <pthread.h>
 #include <arpa/inet.h>
 #include <poll.h>
+#include <signal.h>
 
 #include "error.h"
 #include "comm_consts.h"
@@ -18,23 +19,27 @@
 #include "time_utils.h"
 
 #define h_addr h_addr_list[0] /* for backward compatibility */
+  
+static volatile sig_atomic_t quit;
 
-int clear_queue(struct pollfd *fds, char *buffer, int bsize, struct sockaddr *addr, unsigned int *addrlen);
+void sigint_handler(int sig_num);
 
 int main(int argc, char *argv[])
 {
   timestamp_printf("Starting server!\n");
 
+  signal(SIGINT, sigint_handler);
+
   int sock;
   struct sockaddr_in echoserver, echoclient;
-  unsigned int clientlen, serverlen;
+  unsigned int clientlen = sizeof(echoclient), serverlen;
   int received = 0;
 
   if (argc != 2)
     errorf("Usage: %s <port>\n", argv[0]);
 
   /* Create the UDP socket */
-  if ((sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
+  if ((sock = socket(PF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP)) < 0)
     errorf("Failed to create socket");
 
   /* Construct the server sockaddr_in structure */
@@ -68,14 +73,13 @@ int main(int argc, char *argv[])
     errorf("\nThread creation failed: %d\n", errnum);
   }
 
-  while (strcmp(pcomm.command, "Exit"))
+  while (!quit && strcmp(pcomm.command, "Exit"))
   {
-    clientlen = sizeof(echoclient);
     if ((received = recvfrom(sock, parg.buffer, BUFFER_SIZE, 0,
                              (struct sockaddr *)&echoclient,
                              &clientlen)) < 0)
     {
-      errorf("Failed to receive message");
+      continue;
     }
 
     parg.buffer[received] = '\0';
@@ -83,6 +87,7 @@ int main(int argc, char *argv[])
     //printf("Message: %s\n", parg.buffer);
 
     parse(&pcomm, parg.buffer, MIN_VALUE, MAX_VALUE, OK);
+    //printf("command: %s | argument: %s\n", pcomm.command, pcomm.argument);
 
 		if (matches_no_arg(pcomm.command, pcomm.argument, "CommTest"))
 		{
@@ -106,7 +111,9 @@ int main(int argc, char *argv[])
       errorf("Mismatch in number of bytes sent");
     }
   }
-
+  
+  release(&parg, SERVER);
+  quit_simulator();
   close(sock);
 
   pthread_join(simulator_thread, NULL);
@@ -114,4 +121,9 @@ int main(int argc, char *argv[])
   timestamp_printf("Closing server!\n");
 
   return 0;
+}
+
+void sigint_handler(__attribute__((unused)) int sig_num)
+{
+  quit = 1;
 }
