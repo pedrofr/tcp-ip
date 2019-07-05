@@ -6,8 +6,6 @@
 #include "error.h"
 #include "parse.h"
 
-#include <stdio.h> //to be removed
-
 bool isNumeric(const char *s)
 {
     if (s == NULL || is_empty(s) || isspace(*s))
@@ -40,7 +38,7 @@ bool matches_numeric(const char *command, const char *argument, const char *desi
     return strcmp(command, desired_command) == 0 && isNumeric(argument);
 }
 
-void parse(parscomm *pcomm, const char *rawCommand, double min_range, double max_range, const char *exception)
+void parse(parscomm *pcomm, const char *rawCommand, int min_range, int max_range, const char *exception)
 {
     char *command;
     char *argument;
@@ -80,18 +78,16 @@ void parse(parscomm *pcomm, const char *rawCommand, double min_range, double max
 
     int length = strlen(string);
 
-    if (!length && rawCommand[diff - 1] == '!')
+    if (!length && tofree[diff - 1] == '!')
     {
         //only command
         strcpy(pcomm->command, command);
     }
-    else if (length && rawCommand[diff - 1] == '#')
+    else if (length && tofree[diff - 1] == '#')
     {
         argument = strsep(&string, "!");
 
-        length = strlen(string);
-
-        if (length)
+        if (strlen(string))
         {
             //error
         }
@@ -106,7 +102,7 @@ void parse(parscomm *pcomm, const char *rawCommand, double min_range, double max
                 strcpy(pcomm->argument, argument);
             }
         }
-        else if (strcmp(argument, exception) == 0)
+        else if (!strcmp(argument, exception))
         {
             //command and exception argument
             strcpy(pcomm->command, command);

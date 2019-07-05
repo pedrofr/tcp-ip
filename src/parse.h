@@ -15,4 +15,4 @@ bool checkRange(double value, double min_range, double max_range);
 bool matches_arg(const char *command, const char *argument, const char *desired_command, const char *desired_argument);
 bool matches_no_arg(const char *command, const char *argument, const char *desired_command);
 bool matches_numeric(const char *command, const char *argument, const char *desired_command);
-void parse(parscomm *pcomm, const char *rawCommand, double min_range, double max_range, const char *exception);
+void parse(parscomm *pcomm, const char *rawCommand, int min_range, int max_range, const char *exception);
