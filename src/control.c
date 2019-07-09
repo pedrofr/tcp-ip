@@ -24,10 +24,16 @@ void *control(void *args)
 	
 	pararg *parg = (pararg *)args;
 	parscomm *pcomm = parg->pcomm;
-	contpar cpar = {INITIAL_ANGLE, INITIAL_LEVEL};
-	int estimated_angle = INITIAL_ANGLE;
+	int previous_angle = INITIAL_ANGLE, level = INITIAL_LEVEL;
 
-	pthread_t controller_thread, graph_thread;
+	double reference = REFERENCE;
+	struct timespec time_start, time_last, time_current;
+
+	now(&time_start);
+	time_last = time_current = time_start;
+	perspec pspec = {time_start, CONTROLLER_PERIOD};
+
+	pthread_t graph_thread;
 
 	int errnum;
 	if ((errnum = pthread_create(&graph_thread, NULL, graphics, NULL)))
@@ -51,13 +57,6 @@ void *control(void *args)
 
 	while (loading_graphics());
 
-	if ((errnum = pthread_create(&controller_thread, NULL, controller, NULL)))
-	{
-		errorf("\nThread creation failed: %d\n", errnum);
-	}
-
-	while (loading_controller());
-
   	try = 0;
 	while (!matches_arg(pcomm->command, pcomm->argument, "Start", OK))
 	{
@@ -77,19 +76,28 @@ void *control(void *args)
 
 		if (matches_numeric(pcomm->command, pcomm->argument, "Level"))
 		{
-			cpar.level = atof(pcomm->argument);
+			level = atof(pcomm->argument);
 		}
 		else if (!strcmp(pcomm->command, "Exit"))
 		{
 			break;
 		}
-
-		update_controller(&cpar);
-
-		update_graphics(cpar.level, cpar.angle, 0);
 		
-		int next_send = cpar.angle - estimated_angle;
-		estimated_angle = cpar.angle;
+		now(&time_current);
+		// double T = timediff(&time_current, &time_start);
+		double dT = timediff(&time_current, &time_last);
+		time_last = time_current;
+
+		// timestamp_printf("T: %11.4f | dT: %7.4f", T, dT);
+
+		int angle = pid(dT, level, reference);
+
+		// printf(" | angle: %i\n", angle);
+
+		update_graphics(level, angle, 0);
+		
+		int next_send = angle - previous_angle;
+		previous_angle = angle;
 
 		if (next_send > 0)
 		{	
@@ -103,6 +111,7 @@ void *control(void *args)
 		}
 		else
 		{
+			ensure_period(&pspec);
 			continue;
 		}
 
@@ -113,15 +122,10 @@ void *control(void *args)
 			break;
 		}
 
-		update_controller(&cpar);
-
-		update_graphics(cpar.level, cpar.angle, 0);
+		ensure_period(&pspec);
 	}
 
-	quit_controller();
 	quit_graphics();
-
-	pthread_join(controller_thread, NULL);
 	pthread_join(graph_thread, NULL);
 
 	release_ownership(parg, CONTROL);
