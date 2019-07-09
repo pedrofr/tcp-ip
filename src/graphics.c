@@ -268,8 +268,6 @@ void *graphics()
     ensure_period(&pspec);
   }
 
-  // SDL_Quit();
-
   timestamp_printf("Closing graphics!\n");
 
   pthread_exit(NULL);

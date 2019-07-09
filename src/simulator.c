@@ -24,7 +24,7 @@ void *simulate(void *args)
 
 	while (!quit)
 	{
-		wait_request(parg, SIMULATOR);
+		request_ownership(parg, SIMULATOR);
 
 		if (matches_numeric(pcomm->command, pcomm->argument, "OpenValve"))
 		{
@@ -88,7 +88,7 @@ void *simulate(void *args)
 			quit = 1;
 		}
 
-		release(parg, SIMULATOR);
+		grant_ownership(parg, SIMULATOR, SERVER);
 	}
 	
 	quit_plant();

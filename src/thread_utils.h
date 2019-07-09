@@ -11,10 +11,6 @@ typedef struct parallel_argument
   pthread_cond_t *cond;
 } pararg;
 
-void wait_response(pararg *parg, char id);
-void wait_request(pararg *parg, char id);
-void release(pararg *parg, char id);
-
 void grant_ownership(pararg *parg, unsigned char src, unsigned char dst_mask);
 void wait_for_response(pararg *parg, unsigned char src, unsigned char dst);
 void release_ownership(pararg *parg, unsigned char src);

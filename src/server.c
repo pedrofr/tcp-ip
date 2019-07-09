@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
 		}
     else
     {
-      wait_response(&parg, SERVER);
+      wait_for_response(&parg, SERVER, SIMULATOR);
     }
     
     sprintf(parg.buffer, "%s#%s!", pcomm.command, pcomm.argument);
@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
     }
   }
   
-  release(&parg, SERVER);
+  release_ownership(&parg, SERVER);
   quit_simulator();
   close(sock);
 
