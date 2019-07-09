@@ -68,12 +68,6 @@ void *control(void *args)
 		wait_for_response(parg, CONTROL, CLIENT);
 	}
 
-	// pthread_t keyboard_thread;
-	// if ((errnum = pthread_create(&keyboard_thread, NULL, keyboard_handler, parg)))
-	// {
-	// 	errorf("\nThread creation failed: %d\n", errnum);
-	// }
-
 	while (!quit && strcmp(pcomm->command, "Exit"))
 	{
 		strcpy(pcomm->command, "GetLevel");
@@ -109,7 +103,6 @@ void *control(void *args)
 		}
 		else
 		{
-			wait_for_response(parg, CONTROL, CONTROL | TERMINAL);
 			continue;
 		}
 
@@ -123,17 +116,12 @@ void *control(void *args)
 		update_controller(&cpar);
 
 		update_graphics(cpar.level, cpar.angle, 0);
-		
-		wait_for_response(parg, CONTROL, CONTROL | TERMINAL);
 	}
 
-	quit_keyboard_handler();
-	grant_ownership(parg, CONTROL, TERMINAL);
 	quit_controller();
 	quit_graphics();
 
 	pthread_join(controller_thread, NULL);
-	//pthread_join(keyboard_thread, NULL);
 	pthread_join(graph_thread, NULL);
 
 	release_ownership(parg, CONTROL);

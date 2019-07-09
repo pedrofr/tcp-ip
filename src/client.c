@@ -129,7 +129,7 @@ int main(int argc, char *argv[])
     if (is_empty(pcomm.command))
     {
       empty(pcomm.argument);
-      grant_ownership(&parg, CLIENT, parg.granter & (CONTROL | TERMINAL));
+      grant_ownership(&parg, CLIENT, CONTROL);
       continue;
     }
 
@@ -177,7 +177,7 @@ int main(int argc, char *argv[])
       empty(pcomm.argument);
     }
 
-    grant_ownership(&parg, CLIENT, parg.granter & (CONTROL | TERMINAL));
+    grant_ownership(&parg, CLIENT, CONTROL);
   }
   
   quit_control();
