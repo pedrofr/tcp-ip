@@ -217,6 +217,8 @@ void *graphics()
 
   while (!quit)
   {
+    quitevent();
+
     pthread_mutex_lock(&mutex);
     double var1 = _var1; //level
     double var2 = _var2; //inangle
@@ -229,10 +231,6 @@ void *graphics()
     var1 = saturate(var1, MIN_VALUE, MAX_VALUE, NULL);
     var2 = saturate(var2, MIN_VALUE, MAX_VALUE, NULL);
     var3 = saturate(var3, MIN_VALUE, MAX_VALUE, NULL);
-    
-    // var1 = fmod(var1, MAX_VALUE);
-    // var2 = fmod(var2, MAX_VALUE);
-    // var3 = fmod(var3, MAX_VALUE);
 
     if (load)
     {
