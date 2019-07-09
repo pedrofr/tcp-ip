@@ -56,5 +56,5 @@ void grant_ownership(pararg *parg, unsigned char src, unsigned char dst_mask)
 
 void release_ownership(pararg *parg, unsigned char src)
 {
-	grant_ownership(parg, ANY, src);
+	grant_ownership(parg, src, ANY);
 }
